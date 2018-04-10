@@ -24,6 +24,14 @@ class Mol0(IdHashed):
         self.prim0s = prim0s
         self.hash = sum(map(hash,self.prim0s))
 
+    def __str__(self):
+        if len(self.prim0s) == 0:
+            return "EMPTY-DONT-DISPLAY"
+        elif len(self.prim0s) == 1:
+            return str(self.prim0s[0])
+        else:
+            return "(" + " @ ".join(map(str,self.prim0s)) + ")"
+
     def __repr__(self):
         return "Mol0(" + ", ".join(map(repr, self.prim0s)) + ")"
 
@@ -61,6 +69,21 @@ class Atom1(IdHashed):
         self.source = comp0s([self.a0, self.p1.source, self.b0])
         self.target = comp0s([self.a0, self.p1.target, self.b0])
 
+    def __str__(self):
+        part0s = []
+
+        if len(self.a0):
+            part0s.append(str(self.a0))
+        part0s.append(str(self.p1))
+        if len(self.b0):
+            part0s.append(str(self.b0))
+
+        if len(part0s) > 1:
+            return " @ ".join(part0s)
+        else:
+            return part0s[0]
+
+
     def __repr__(self):
         return "Atom1(" + repr(self.a0) + ", " + repr(self.p1) + ", " + repr(self.b0) + ")"
 
@@ -73,6 +96,9 @@ class IdMol1(Mol1):
         self.atom1s = ()
         self.source = self.mol0
         self.target = self.mol0
+
+    def __str__(self):
+        return "1_{" + str(self.mol0) + "}"
 
     def __repr__(self):
         return "IdMol1(" + repr(self.mol0) + ")"
@@ -87,6 +113,9 @@ class NonIdMol1(Mol1):
         self.source = self.atom1s[0].source
         self.target = self.atom1s[-1].target
 
+    def __str__(self):
+        return " . ".join(map(lambda x: "(" + str(x) + ")", self.atom1s))
+
     def __repr__(self):
         return "Mol1(" + ", ".join(map(repr, self.atom1s)) + ")"
 
@@ -96,10 +125,13 @@ class NonIdMol1(Mol1):
 class EqMol1(IdHashed):
     def __init__(self, mol1s):
         self.mol1s = mol1s
-        self.length = len(list(self.mol1s)[0])
+        self.length = len(next(iter(self.mol1s)))
+
+    def __str__(self):
+        return "[" + next(iter(self.mol1s)) + "]"
 
     def __repr__(self):
-        return "EqMol1(" + repr(list(self.mol1s)) + ")"
+        return "EqMol1(" + repr(self.mol1s) + ")"
 
     def __len__(self):
         return self.length
@@ -116,6 +148,9 @@ class ConstPrim2(Prim2):
         self.target = target
         super(ConstPrim2, self).__init__()
 
+    def __str__(self):
+        return "p2(" + self.name + ")"
+
     def __repr__(self):
         return self.name
 
@@ -130,16 +165,41 @@ class Atom2(IdHashed):
         self.target = comp1s([self.l1, comp0s([self.a0, self.p2.target, self.b0]), self.r1])
         self.collapse = comp1s([self.l1, comp0s([self.a0, self.p2.collapse, self.b0]), self.r1])
 
+    def __str__(self):
+        part1s = []
+        part0s = []
+        if len(self.l1):
+            part1s.append(str(self.l1))
+        if len(self.a0):
+            part0s.append(str(self.a0))
+        part0s.append(str(self.p2))
+        if len(self.b0):
+            part0s.append(str(self.b0))
+        if len(part0s) > 1:
+            part1s.append("(" + " @ ".join(part0s) + ")")
+        else:
+            part1s.append(part0s[0])
+        if len(self.r1):
+            part1s.append(str(self.r1))
+        if len(part1s) > 1:
+            return " . ".join(part1s)
+        else:
+            return part1s[0]
+
+
     def __repr__(self):
-        return "Atom2(" + repr(self.l1) + ", " + repr(self.a0) + ", " + repr(self.p1) + ", " + repr(self.b0) + ", " + repr(self.r1) + ")"
+        return "Atom2(" + repr(self.l1) + ", " + repr(self.a0) + ", " + repr(self.p2) + ", " + repr(self.b0) + ", " + repr(self.r1) + ")"
 
 class EqAtom2(IdHashed):
     def __init__(self,atom2s):
         self.atom2s = atom2s
         self.righthand = min(self.atom2s, key=lambda x: len(x.l1.atom1s))
         self.lefthand = min(self.atom2s, key=lambda x: len(x.r1.atom1s))
-        self.source = self.atom2s[0].source
-        self.target = self.atom2s[0].target
+        self.source = fEqMol1(next(iter(self.atom2s)).source)
+        self.target = fEqMol1(next(iter(self.atom2s)).target)
+
+    def __str__(self):
+        return "[" + str(self.righthand) + "]"
 
     def __repr__(self):
         return "EqAtom2(" + repr(self.atom2s) + ")"
@@ -150,12 +210,15 @@ class AEMol2(IdHashed):
 class AEIdMol2(AEMol2):
     def __init__(self, eqMol1):
         self.eqMol1 = eqMol1
-        self.atom2s = ()
+        self.eqAtom2s = ()
         self.source = self.eqMol1
         self.target = self.eqMol1
 
+    def __str__(self):
+        return "1_{" + str(self.eqMol1) + "}"
+
     def __repr__(self):
-        return "IdMol2(" + repr(self.eqMol1) + ")"
+        return "AEIdMol2(" + repr(self.eqMol1) + ")"
 
     def __len__(self):
         return 0
@@ -166,22 +229,118 @@ class AENonIdMol2(AEMol2):
         self.source = self.eqAtom2s[0].source
         self.target = self.eqAtom2s[-1].target
 
+    def __str__(self):
+        if len(self.eqAtom2s) > 1:
+            return " & ".join(map(str, self.eqAtom2s))
+        else:
+            return str(x)
+
     def __repr__(self):
-        return "Mol2(" + ", ".join(map(repr, self.eqAtom2s)) + ")"
+        return "AEMol2(" + ", ".join(map(repr, self.eqAtom2s)) + ")"
 
     def __len__(self):
         return len(self.eqAtom2s)
 
 class EqAEMol2(IdHashed):
-    def __init__(self, mol2s):
-        self.mol2s = mol2s
-        self.length = len(list(self.mol2s)[0])
+    def __init__(self, aeMol2s):
+        self.aeMol2s = aeMol2s
+        self.length = len(next(iter(self.aeMol2s)))
+
+    def __str__(self):
+        return "[" + str(next(iter(self.aeMol2s))) + "]"
 
     def __repr__(self):
-        return "EqMol2(" + repr(list(self.mol2s)) + ")"
+        return "EqAEMol2(" + repr(list(self.aeMol2s)) + ")"
 
     def __len__(self):
         return self.length
+
+class Prim3(IdHashed):
+    pass
+
+class ConstPrim3(Prim3):
+    def __init__(self,name,source,target):
+        self.name = name
+        self.source = source
+        self.target = target
+
+    def __str__(self):
+        return "p3(" + self.name + ")"
+
+    def __repr__(self):
+        return self.name
+
+class Atom3(IdHashed):
+    def __init__(t2, l1, a0, p3, b0, r1, b2):
+        self.t2 = t2
+        self.l1 = l1
+        self.a0 = a0
+        self.p3 = p3
+        self.b0 = b0
+        self.r1 = r1
+        self.b2 = b2
+        self.source = comp2s([t2, comp1s([l1, comp0s([a0, p3.source, b0]), r1]), b2])
+        self.target = comp2s([t2, comp1s([l1, comp0s([a0, p3.target, b0]), r1]), b2])
+
+    def __str__(self):
+        part2s = []
+        part1s = []
+        part0s = []
+        if len(self.t2):
+            parts2.append(str(self.t2))
+        if len(self.l1):
+            part1s.append(str(self.l1))
+        if len(self.a0):
+            part0s.append(str(self.a0))
+        part0s.append(str(self.p2))
+        if len(self.b0):
+            part0s.append(str(self.b0))
+        if len(part0s) > 1:
+            part1s.append("(" + " @ ".join(part0s) + ")")
+        else:
+            part1s.append(part0s[0])
+        if len(self.r1):
+            part1s.append(str(self.r1))
+        if len(part1s) > 1:
+            part2s.append("(" + " . ".join(part1s) + ")")
+        else:
+            part2s.append(part1s[0])
+        if len(self.b2):
+            part2s.append(str(self.b2))
+        if len(part2s) > 1:
+            return " & ".join(part2s)
+        else:
+            return part2s[0]
+
+
+    def __repr__(self):
+        return "Atom3(" + repr(self.t2) + ", " + repr(self.l1) + ", " + repr(self.a0) + ", " + repr(self.p3) + ", " + repr(self.b0) + ", " + repr(self.r1) + ", " + repr(self.b2) + ")"
+
+class Mol3(IdHashed):
+    pass
+
+class IdMol3(Mol3):
+    def __init__(self, aeMol2):
+        self.aeMol2 = aeMol2
+        self.atom3s = ()
+        self.source = aeMol2
+        self.target = aeMol2
+
+    def __len__(self):
+        return 0
+
+class NonIdMol3(Mol3):
+    def __init__(self, atom3s):
+        self.atom3s = atom3s
+        self.source = self.atom3s[0].source
+        self.target = self.atom3s[-1].target
+
+    def __len__(self):
+        return len(self.atom3s)
+
+    def __repr__(self):
+        return "Mol3(" + ", ".join(map(repr, self.atom3s)) + ")"
+
 
 class TransposeType(Enum):
     LEFT = 0
@@ -236,44 +395,83 @@ def prim1ToMol1(p):
 def atom1ToMol1(a):
     return fNonIdMol1((a,))
 
+def prim2ToAtom2(p):
+    return fAtom2(fIdMol1(p.source.source), fMol0(()), p, fMol0(()), fIdMol1(p.target.target))
+
+def prim2ToEqAtom2(p):
+    return fEqAtom2(prim2ToAtom2(p))
+
+def prim2ToAEMol2(p):
+    return fAENonIdMol2((prim2ToEqAtom2(p),))
+
+def source0(x):
+    if type(x) in [Atom1, IdMol1, NonIdMol1] or isinstance(x, Prim1):
+        return x.source
+    if type(x) in [Atom2, EqAtom2, AENonIdMol2, AEIdMol2] or isinstance(x, Prim2):
+        return x.source.source
+
+def target0(x):
+    if type(x) in [Atom1, IdMol1, NonIdMol1] or isinstance(x, Prim1):
+        return x.target
+    if type(x) in [Atom2, EqAtom2, AENonIdMol2, AEIdMol2] or isinstance(x, Prim2):
+        return x.target
+
+comp0Table = {
+  (Prim0, Prim0): lambda x, y: comp0(prim0ToMol0(x), prim0ToMol0(y)),
+  (Mol0, Mol0): lambda x, y: fMol0(x.prim0s + y.prim0s),
+  (Mol0, Prim1): lambda x, y: comp0(x, prim1ToAtom1(y)),
+  (Prim1, Mol0): lambda x, y: comp0(prim1ToAtom1(x), y),
+  (Mol0, Atom1): lambda x, y: fAtom1(comp0(x, y.a0), y.p1, y.b0),
+  (Atom1, Mol0): lambda x, y: fAtom1(x.a0, x.p1, comp0(x.b0, y)),
+  (Mol0, NonIdMol1): lambda x, y: fNonIdMol1(tuple(map(lambda z: comp0(x, z), y.atom1s))),
+  (NonIdMol1, Mol0): lambda x, y: fNonIdMol1(tuple(map(lambda z: comp0(z, y), x.atom1s))),
+  (Mol0, IdMol1): lambda x, y: fIdMol1(comp0(x, y.mol0)),
+  (IdMol1, Mol0): lambda x, y: fIdMol1(comp0(x.mol0, y)),
+  (IdMol1, IdMol1): lambda x, y: fIdMol1(comp0(x.mol0, y.mol0)),
+  (IdMol1, NonIdMol1): lambda x, y: fNonIdMol1(tuple(map(lambda z: comp0(x.mol0, z), y.atom1s))),
+  (NonIdMol1, IdMol1): lambda x, y: fNonIdMol1(tuple(map(lambda z: comp0(z, y.mol0), x.atom1s))),
+  (NonIdMol1, NonIdMol1): lambda x, y: fNonIdMol1(tuple(map(lambda z: comp0(z, y.source), x.atom1s)) + tuple(map(lambda z: comp0(x.target, z), y.atom1s))),
+  (Mol0, Prim2): lambda x, y: comp0(x, prim2ToAtom2(y)),
+  (Prim2, Mol0): lambda x, y: comp0(prim2ToAtom2(x), y),
+  (Mol0, Atom2): lambda x, y: fAtom2(comp0(x, y.l1), comp0(x, y.a0), y.p2, y.b0, comp0(x, y.r1)),
+  (Atom2, Mol0): lambda x, y: fAtom2(comp0(x.l1, y), x.a0, x.p2, comp0(x.b0, y), comp0(x.r1, y)),
+  (EqMol1, EqAtom2): lambda x, y: fEqAtom2(comp0(next(iter(x.mol1s)), next(iter(y.atom2s)))),
+  (EqAtom2, EqMol1): lambda x, y: fEqAtom2(comp0(next(iter(x.atom2s)), next(iter(y.mol1s)))),
+  (NonIdMol1, EqAtom2): lambda x, y: fEqAtom2(comp0(x, next(iter(y.atom2s)))),
+  (EqAtom2, NonIdMol1): lambda x, y: fEqAtom2(comp0(next(iter(x.atom2s)), y)),
+  (IdMol1, EqAtom2): lambda x, y: fEqAtom2(comp0(x, next(iter(y.atom2s)))),
+  (EqAtom2, IdMol1): lambda x, y: fEqAtom2(comp0(next(iter(x.atom2s)), y)),
+  (NonIdMol1, Atom2): lambda x, y: fAtom2(comp0(x, y.l1), comp0(x.target, y.a0), y.p2, y.b0, comp0(x.target, y.r1)),
+  (Atom2, NonIdMol1): lambda x, y: fAtom2(comp0(x.l1, y.source), x.a0, x.p2, comp0(x.b0, y.source), comp0(x.r1, y)),
+  (IdMol1, Atom2): lambda x, y: fAtom2(comp0(x, y.l1), comp0(x.target, y.a0), y.p2, y.b0, comp0(x.target, y.r1)),
+  (Atom2, IdMol1): lambda x, y: fAtom2(comp0(x.l1, y.source), x.a0, x.p2, comp0(x.b0, y.source), comp0(x.r1, y)),
+  (AENonIdMol2, AENonIdMol2): lambda x, y: fAENonIdMol2(tuple(map(lambda z: comp0(z, y.source), x.eqAtom2s)) + tuple(map(lambda z: comp0(x.target, z), y.eqAtom2s)))
+}
+
 
 def comp0(x,y):
     if isinstance(x, Prim0):
-        x = prim0ToMol0(x)
+        typeX = Prim0
+    elif isinstance(x, Prim1):
+        typeX = Prim1
+    elif isinstance(x, Prim2):
+        typeX = Prim2
+    else:
+        typeX = type(x)
     if isinstance(y, Prim0):
-        y = prim0ToMol0(y)
+        typeY = Prim0
+    elif isinstance(y, Prim1):
+        typeY = Prim1
+    elif isinstance(y, Prim2):
+        typeY = Prim2
+    else:
+        typeY = type(y)
+    typePair = (typeX, typeY)
 
-    if isinstance(x, Mol0) and isinstance(y, Mol0):
-        return fMol0(x.prim0s + y.prim0s)
-
-    if isinstance(x, Mol0) and isinstance(y, Atom1):
-        return fAtom1(comp0(x, y.a0), y.p1, y.b0)
-    if isinstance(x, Atom1) and isinstance(y, Mol0):
-        return fAtom1(x.a0, x.p1, comp0(x.b0, y))
-
-    if isinstance(x, Mol0) and isinstance(y, Mol1):
-        return fMol1(tuple(map(lambda z: comp0(x, z), y.atom1s)))
-    if isinstance(x, Mol1) and isinstance(y, Mol0):
-        return fMol1(tuple(map(lambda z: comp0(z, y), x.atom1s)))
-
-    if isinstance(x, Prim1):
-        x = prim1ToMol1(x)
-    elif isinstance(x, Atom1):
-        x = atom1ToMol1(x)
-    if isinstance(y, Prim1):
-        y = prim1ToMol1(y)
-    elif isinstance(y, Atom1):
-        y = atom1ToMol1(y)
-
-    if isinstance(x, IdMol1) and isinstance(y, IdMol1):
-        return fIdMol1(comp0(x.mol0, y.mol0))
-
-    if isinstance(x, Mol1) and isinstance(y, Mol1):
-        firstAtoms = tuple(map(lambda z: comp0(z, y.source), x.atom1s))
-        secondAtoms = tuple(map(lambda z: comp0(x.target, z), y.atom1s))
-        return fNonIdMol1(firstAtoms + secondAtoms)
-
-    raise Exception("Invalid 0-composition between %s and %s" % (str(type(x)), str(type(y))))
+    if typePair in comp0Table:
+        return comp0Table[typePair](x,y)
+    else:
+        raise Exception("Invalid 0-composition between %s and %s" % (str(type(x)), str(type(y))))
 
 def comp0s(xs):
     result = xs[0]
@@ -281,28 +479,74 @@ def comp0s(xs):
         result = comp0(result,x)
     return result
 
+comp1Table = {
+    (IdMol1, Atom1): lambda x, y: fNonIdMol1((y,)),
+    (Atom1, IdMol1): lambda x, y: fNonIdMol1((x,)),
+    (NonIdMol1, Atom1): lambda x, y: fNonIdMol1(x.atom1s + (y,)),
+    (Atom1, NonIdMol1): lambda x, y: fNonIdMol1((x,) + y.atom1s),
+    (IdMol1, IdMol1): lambda x, y: x,
+    (NonIdMol1, IdMol1): lambda x, y: x,
+    (IdMol1, NonIdMol1): lambda x, y: y,
+    (NonIdMol1, NonIdMol1): lambda x, y: fNonIdMol1(x.atom1s + y.atom1s)
+}
+
 def comp1(x,y):
+    if target0(x) != source0(y):
+        raise Exception("Source target mismatch in 1-composition: %s and %s" % (repr(x), repr(y)))
+
     if isinstance(x, Prim1):
-        x = prim1ToMol1(x)
+        typeX = Prim1
+    else:
+        typeX = type(x)
     if isinstance(y, Prim1):
-        y = prim1ToMol1(y)
-    if isinstance(x, Atom1):
-        x = atom1ToMol1(x)
-    if isinstance(y, Atom1):
-        y = atom1ToMol1(y)
+        typeY = Prim1
+    else:
+        typeY = type(y)
+    typePair = (typeX, typeY)
 
-    if isinstance(x, Mol1) and isinstance(y, Mol1):
-        if x.target != y.source:
-            raise Exception("Source target mismatch in 1-composition: %s and %s" % (repr(x), repr(y)))
-        return fNonIdMol1(x.atom1s + y.atom1s)
-
-    raise Exception("Invalid 1-composition between %s and %s" % (str(type(x)), str(type(y))))
+    if typePair in comp1Table:
+        return comp1Table[typePair](x,y)
+    else:
+        raise Exception("Invalid 1-composition between %s and %s" % (str(type(x)), str(type(y))))
 
 
 def comp1s(xs):
     result = xs[0]
     for x in xs[1:]:
-        result = comp1(res,x)
+        result = comp1(result,x)
+    return result
+
+comp2Table = {
+    (AEIdMol2, AEIdMol2): lambda x, y: x,
+    (AENonIdMol2, AEIdMol2): lambda x, y: x,
+    (AEIdMol2, AENonIdMol2): lambda x, y: y,
+    (AENonIdMol2, AENonIdMol2): lambda x, y: fAENonIdMol2(x.eqAtom2s + y.eqAtom2s)
+}
+
+def comp2(x,y):
+    if x.target != y.source:
+        raise Exception("Source target mismatch in 2-composition: %s and %s" % (repr(x), repr(y)))
+
+    if isinstance(x, Prim2):
+        typeX = Prim2
+    else:
+        typeX = type(x)
+    if isinstance(y, Prim2):
+        typeY = Prim2
+    else:
+        typeY = type(y)
+    typePair = (typeX, typeY)
+
+    if typePair in comp2Table:
+        return comp2Table[typePair](x,y)
+    else:
+        raise Exception("Invalid 2-composition between %s and %s" % (str(type(x)), str(type(y))))
+
+
+def comp2s(xs):
+    result = xs[0]
+    for x in xs[1:]:
+        result = comp2(result,x)
     return result
 
 
@@ -395,8 +639,8 @@ def stepEquivalentMol1s(mol1):
     combined = [comp1(x,y) for x in leftEqs for y in rightEqs]
 
     stepped = set(combined)
-    if len(mol1.atom1s) >= 2:
-        transposeIndex = len(left.atom1s)
+    if len(mol1) >= 2:
+        transposeIndex = len(left)
         for c in combined:
             a1 = c.atom1s[transposeIndex - 1]
             a2 = c.atom1s[transposeIndex]
@@ -443,7 +687,7 @@ def collapseToAtom2(mol1):
     for ii in range(len(mol1.atom1s)):
         m = mol1.atom1s[ii]
         if isinstance(m.p1, CollapsePrim1):
-            return fAtom2(takeMol1(mol1, ii), comp0s([m.a0, m.p1.prim2, m.b0]), dropMol1(mol1, ii+1))
+            return fAtom2(takeMol1(mol1, ii), m.a0, m.p1.prim2, m.b0, dropMol1(mol1, ii+1))
 
 
 def findEquivalentAtom2s(atom2):
@@ -452,7 +696,7 @@ def findEquivalentAtom2s(atom2):
 
 
 def fEqAtom2(atom2):
-    if atom2 in eqAtom2ByAtom21:
+    if atom2 in eqAtom2ByAtom2:
         return eqAtom2ByAtom2[atom2]
     equiv = findEquivalentAtom2s(atom2)
     eqAtom2 = EqAtom2(equiv)
@@ -508,42 +752,131 @@ def leftTransposeEqAtom2s(a1,a2):
     # TODO: Move composition outside loops to speed up
     for rightMol in a1rEq.mol1s:
         xLeft1 = removeSuffixMol1(comp1(comp0s([a2l.a0, a2l.p2.source, a2l.b0]), a2l.r1), rightMol)
-        if xLeft1:
+        if xLeft1 is not None:
             for leftMol in a2lEq.mol1s:
                 xLeft2 = removePrefixMol1(comp1(a1r.l1, comp0s([a1r.a0, a1r.p2.target, a1r.b0])), leftMol)
                 if xLeft1 == xLeft2:
                     a2New = fEqAtom2(fAtom2(comp1s([a1r.l1, comp0s([a1r.a0, a1r.p2.source, a1r.b0]), xLeft1]), a2l.a0, a2l.p2, a2l.b0, a2l.r1))
-                    a1New = fEqAtom2(fAtom2(a1r.l1, a1r.a0, a1r.p2, a1r.b0, comp1s([xLeft1, comp0s([a2l.a0, a2l.p2.target, a2l.b0]), a2l.r1))
+                    a1New = fEqAtom2(fAtom2(a1r.l1, a1r.a0, a1r.p2, a1r.b0, comp1s([xLeft1, comp0s([a2l.a0, a2l.p2.target, a2l.b0]), a2l.r1])))
                     return (a2New, a1New)
-    return None
+    return (None, None)
 
-# Returns a tuple of (a2',a1') or None
+# Returns a tuple of (a2',a1') or (None, None)
 def rightTransposeEqAtom2s(a1,a2):
     a1l = a1.lefthand
     a2r = a2.righthand
 
     a1lEq = fEqMol1(a1l.l1)
-    a2rEq = fEqMol(a2r.r1)
+    a2rEq = fEqMol1(a2r.r1)
 
     # TODO: Move composition outside loops to speed up
     for leftMol in a1lEq.mol1s:
         xRight1 = removePrefixMol1(comp1(a2r.l1, comp0s([a2r.a0, a2r.p2.source, a2r.b0])), leftMol)
-        if xRight1:
+        if xRight1 is not None:
             for rightMol in a2rEq.mol1s:
                 xRight2 = removeSuffixMol1(comp1(comp0s([a1l.a0, a1l.p2.target, a1l.b0]), a1l.r1), rightMol)
                 if xRight1 == xRight2:
                     a2New = fEqAtom2(fAtom2(a2r.l1, a2r.a0, a2r.p2, a2r.b0, comp1s([xRight1, comp0s([a1l.a0, a1l.p2.source, a1l.b0]), a1l.r1])))
                     a1New = fEqAtom2(fAtom2(comp1s([a2r.l1, comp0s([a2r.a0, a2r.p2.target, a2r.b0]), xRight1]), a1l.a0, a1l.p2, a1l.b0, a1l.r1))
                     return (a2New, a1New)
-    return None
+    return (None, None)
 
-a = ConstPrim0("a")
-b = ConstPrim0("b")
-c = ConstPrim0("c")
-d = ConstPrim0("d")
 
-f = ConstPrim1("f",a,b)
-g = ConstPrim1("g",c,d)
+def splitAEMol2InHalf(m):
+    l = len(m.eqAtom2s)
+    p = int(l / 2)
+    leftAtom2s = m.eqAtom2s[:p]
+    rightAtom2s = m.eqAtom2s[p:]
+    if not leftAtom2s:
+        left = fAEIdMol2(m.source)
+    else:
+        left = fAENonIdMol2(leftAtom2s)
+    if not rightAtom2s:
+        right = fAEIdMol2(m.target)
+    else:
+        right = fAENonIdMol2(rightAtom2s)
+    return (left,right)
 
-l = comp0(f,g)
-r = fEqMol1(l)
+eqAEMol2ByAEMol2 = {}
+
+def stepEquivalentAEMol2s(aeMol2):
+    (left, right) = splitAEMol2InHalf(aeMol2)
+    if left == aeMol2 or right == aeMol2:
+        return set()
+
+    leftEqs = fEqAEMol2(left).aeMol2s
+    rightEqs = fEqAEMol2(right).aeMol2s
+    combined = [comp2(x,y) for x in leftEqs for y in rightEqs]
+
+    stepped = set(combined)
+    if len(aeMol2) >= 2:
+        transposeIndex = len(left)
+        for c in combined:
+            a1 = c.eqAtom2s[transposeIndex - 1]
+            a2 = c.eqAtom2s[transposeIndex]
+            (a2NewL, a1NewL) = leftTransposeEqAtom2s(a1,a2)
+            if a2NewL:
+                result = fAENonIdMol2(take(c.eqAtom2s, transposeIndex - 1) + (a2NewL, a1NewL) + drop(c.eqAtom2s, transposeIndex + 1))
+                stepped.add(result)
+            (a2NewR, a1NewR) = rightTransposeEqAtom2s(a1,a2)
+            if a2NewR:
+                result = fAENonIdMol2(take(c.eqAtom2s, transposeIndex - 1) + (a2NewR, a1NewR) + drop(c.eqAtom2s, transposeIndex + 1))
+                stepped.add(result)
+    return stepped
+
+
+def findEquivalentAEMol2s(aeMol2):
+    if isinstance(aeMol2, AEIdMol2):
+        return frozenset([aeMol2])
+    frontier = [aeMol2]
+    equiv = frozenset([aeMol2])
+    while frontier:
+        nxt = frontier.pop()
+        new = stepEquivalentAEMol2s(nxt)
+        remNew = new.difference(equiv)
+        frontier = frontier + list(remNew)
+        equiv = equiv.union(remNew)
+    return equiv
+
+
+def fEqAEMol2(aeMol2):
+    if aeMol2 in eqAEMol2ByAEMol2:
+        return eqAEMol2ByAEMol2[aeMol2]
+    equiv = findEquivalentAEMol2s(aeMol2)
+    eqAEMol2 = EqAEMol2(equiv)
+    for e in equiv:
+        eqAEMol2ByAEMol2[e] = eqAEMol2
+    return eqAEMol2
+
+a = prim0ToMol0(ConstPrim0("a"))
+b = prim0ToMol0(ConstPrim0("b"))
+c = prim0ToMol0(ConstPrim0("c"))
+d = prim0ToMol0(ConstPrim0("d"))
+e = prim0ToMol0(ConstPrim0("e"))
+f = prim0ToMol0(ConstPrim0("f"))
+
+x = prim1ToMol1(ConstPrim1("x",a,a))
+y = prim1ToMol1(ConstPrim1("y",c,d))
+z = prim1ToMol1(ConstPrim1("z",e,f))
+
+x1 = prim1ToMol1(ConstPrim1("x1",a,b))
+x2 = prim1ToMol1(ConstPrim1("x2",a,b))
+y1 = prim1ToMol1(ConstPrim1("y1",c,d))
+y2 = prim1ToMol1(ConstPrim1("y2",c,d))
+z1 = prim1ToMol1(ConstPrim1("z1",c,d))
+z2 = prim1ToMol1(ConstPrim1("z2",c,d))
+
+h = prim2ToAEMol2(ConstPrim2("h", x1, x2))
+k = prim2ToAEMol2(ConstPrim2("k",y1,y2))
+l = prim2ToAEMol2(ConstPrim2("l",y1,y2))
+
+
+
+test = comp0s([h,k,l])
+p = test.eqAtom2s
+p0 = p[0]
+p1 = p[1]
+test2 = fEqAEMol2(test)
+
+#l = comp0s([x,y,z])
+#r = fEqMol1(l)
