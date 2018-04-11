@@ -35,5 +35,5 @@ h2 = prim2ToAEMol2(ConstPrim2("h2", x2, x3))
 
 #bb1 = comp1s([z,z,comp2s([h1,h2])])
 #bb2 = idPrefixDecompAEMol2(bb1)
-bb3 = fEqAEMol2(comp1s([h,k,w,l,z]))
-bb4 = horizontalDecompEqAEMol2(bb3)
+bb3 = fEqAEMol2(comp0s([w,h,w,l]))
+bb4 = tensorDecompEqAEMol2(bb3)

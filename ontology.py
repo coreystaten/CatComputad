@@ -38,7 +38,8 @@ class Mol0(IdHashed):
     def __len__(self):
         return len(self.prim0s)
 
-
+# NOTE: For equivalence results to work, 1-primitives must not have source or
+# target which is not fMol0(()).
 class Prim1(IdHashed):
     pass
 
@@ -63,6 +64,9 @@ class CollapsePrim1(Prim1):
 
 class Atom1(IdHashed):
     def __init__(self,a0,p1,b0):
+        if not(type(a0) == Mol0 and type(b0) == Mol0 and isinstance(p1, Prim1)):
+            raise "ERROR"
+
         self.a0 = a0
         self.b0 = b0
         self.p1 = p1
@@ -250,6 +254,8 @@ class EqAEMol2(IdHashed):
     def __init__(self, aeMol2s):
         self.aeMol2s = aeMol2s
         self.length = len(next(iter(self.aeMol2s)))
+        self.source = next(iter(aeMol2s)).source
+        self.target = next(iter(aeMol2s)).target
 
     def __str__(self):
         return "[" + str(next(iter(self.aeMol2s))) + "]"
@@ -368,6 +374,16 @@ def drop(l, n):
     else:
         return l[n:]
 
+def takeMol0(mol0, n):
+    if n <= 0:
+        return fMol0(())
+    return fMol0(take(mol1.prim0s, n))
+
+def dropMol0(mol0, n):
+    if n >= len(mol0):
+        return fMol0(())
+    return fMol0(drop(mol1.prim0s, n))
+
 def takeMol1(mol1, n):
     if n <= 0:
         return fIdMol1(mol1.source)
@@ -378,15 +394,15 @@ def dropMol1(mol1, n):
         return fIdMol1(mol1.target)
     return fNonIdMol1(drop(mol1.atom1s, n))
 
-def takeMol2(mol2, n):
+def takeAEMol2(aeMol2, n):
     if n <= 0:
-        return fIdMol2(mol2.source)
-    return fNonIdMol2(take(mol2.atom2s, n))
+        return fIdMol2(aeMol2.source)
+    return fNonIdMol2(take(aeMol2.eqAtom2s, n))
 
-def dropMol2(mol2, n):
-    if n >= len(mol2):
-        return fIdMol2(mol2.target)
-    return fNonIdMol2(drop(mol2.atom2s, n))
+def dropAEMol2(aeMol2, n):
+    if n >= len(aeMol2):
+        return fIdMol2(aeMol2.target)
+    return fNonIdMol2(drop(aeMol2.eqAtom2s, n))
 
 def prim0ToMol0(p):
     return fMol0((p,))
@@ -457,30 +473,170 @@ comp0Table = {
   (AENonIdMol2, AENonIdMol2): lambda x, y: fAENonIdMol2(tuple(map(lambda z: comp0(z, y.source), x.eqAtom2s)) + tuple(map(lambda z: comp0(x.target, z), y.eqAtom2s)))
 }
 
+dimByType = {
+    Prim0: 0,
+    ConstPrim0: 0,
+    Mol0: 0,
+    Prim1: 1,
+    ConstPrim1: 1,
+    CollapsePrim1: 1,
+    Atom1: 1,
+    IdMol1: 1,
+    NonIdMol1: 1,
+    EqMol1: 1,
+    Prim2: 2,
+    ConstPrim2: 2,
+    Atom2: 2,
+    EqAtom2: 2,
+    AEIdMol2: 2,
+    AENonIdMol2: 2,
+    EqAEMol2: 2,
+    Prim3: 3,
+    Atom3: 3,
+    IdMol3: 3,
+    NonIdMol3: 3
+}
+
+def dim(x):
+    return dimByType[type(x)]
 
 def comp0(x,y):
-    if isinstance(x, Prim0):
-        typeX = Prim0
-    elif isinstance(x, Prim1):
-        typeX = Prim1
-    elif isinstance(x, Prim2):
-        typeX = Prim2
-    else:
-        typeX = type(x)
-    if isinstance(y, Prim0):
-        typeY = Prim0
-    elif isinstance(y, Prim1):
-        typeY = Prim1
-    elif isinstance(y, Prim2):
-        typeY = Prim2
-    else:
-        typeY = type(y)
-    typePair = (typeX, typeY)
+    maxDim = max(dim(x), dim(y))
 
-    if typePair in comp0Table:
-        return comp0Table[typePair](x,y)
-    else:
-        raise Exception("Invalid 0-composition between %s and %s" % (str(type(x)), str(type(y))))
+    if maxDim == 3:
+        # Handle this case special, because we don't want to escalate things to equivalence classes.
+        raise Exception("Unimplemented")
+
+    if maxDim >= 0:
+        if isinstance(x, Prim0):
+            x = fMol0((x,))
+        if isinstance(y, Prim0):
+            y = fMol0((y,))
+
+        if isinstance(x, Mol0) and isinstance(y, Mol0):
+            return fMol0(x.prim0s + y.prim0s)
+    if maxDim >= 1:
+        if isinstance(x, Mol0):
+            x = fIdMol1(x)
+        if isinstance(y, Mol0):
+            y = fIdMol1(y)
+
+        if isinstance(x, Prim1):
+            x = prim1ToAtom1(x)
+        if isinstance(y, Prim1):
+            y = prim1ToAtom1(y)
+
+        if isinstance(x, IdMol1) and isinstance(y, IdMol1):
+            return fIdMol1(comp0(x.mol0, y.mol0))
+        elif isinstance(x, IdMol1) and isinstance(y, Atom1):
+            return fAtom1(comp0(x.mol0, y.a0), y.p1, y.b0)
+        elif isinstance(x, Atom1) and isinstance(y, IdMol1):
+            return fAtom1(x.a0, x.p1, comp0(x.b0, y.mol0))
+        elif isinstance(x, IdMol1) and isinstance(y, NonIdMol1):
+            return fNonIdMol1(tuple(map(lambda z: comp0(x, z), y.atom1s)))
+        elif isinstance(x, NonIdMol1) and isinstance(y, IdMol1):
+            return fNonIdMol1(tuple(map(lambda z: comp0(z, y), x.atom1s)))
+
+        if isinstance(x, Atom1):
+            x = fNonIdMol1((x,))
+        if isinstance(y, Atom1):
+            y = fNonIdMol1((y,))
+
+        if isinstance(x, NonIdMol1) and isinstance(y, NonIdMol1):
+            return fNonIdMol1(tuple(map(lambda z: comp0(z, y.source), x.atom1s)) + tuple(map(lambda z: comp0(x.target, z), y.atom1s)))
+
+        if isinstance(x, Mol1) and isinstance(y, EqMol1):
+            return fEqMol1(comp0(x, next(iter(y.mol1s))))
+        elif isinstance(x, EqMol1) and isinstance(y, Mol1):
+            return fEqMol1(comp0(next(iter(x.mol1s)), y))
+        elif isinstance(x, EqMol1) and isinstance(y, EqMol1):
+            return fEqMol1(comp0(next(iter(x.mol1s)), next(iter(y.mol1s))))
+
+    if maxDim >= 2:
+        if isinstance(x, Prim2):
+            x = prim2ToAtom2(x)
+        if isinstance(y, Prim2):
+            y = prim2ToAtom2(y)
+
+        if isinstance(x, Atom2) and isinstance(y, Mol1):
+            return fAtom2(comp0(x.l1, y.source), x.a0, x.p2, comp0(x.b0, y.source), comp0(x.r1, y))
+        elif isinstance(x, Mol1) and isinstance (y, Atom2):
+            return fAtom2(comp0(x, y.l1), comp0(x.target, y.a0), y.p2, y.b0, comp0(x.target, y.r1))
+
+        if isinstance(x, Mol1):
+            x = fAEIdMol2(fEqMol1(x))
+        elif isinstance(x, EqMol1):
+            x = fAEIdMol2(x)
+        elif isinstance(x, Atom2):
+            x = fEqAtom2(x)
+        if isinstance(y, Mol1):
+            y = fAEIdMol2(fEqMol1(y))
+        elif isinstance(y, EqMol1):
+            y = fAEIdMol2(y)
+        elif isinstance(y, Atom2):
+            y = fEqAtom2(y)
+
+        if isinstance(x, AEIdMol2) and isinstance(y, AEIdMol2):
+            return fAEIdMol2(comp0(x.eqMol1, y.eqMol1))
+        elif isinstance(x, EqAtom2) and isinstance(y, AEIdMol2):
+            return fEqAtom2(comp0(next(iter(x.atom2s)), next(iter(y.eqMol1.mol1s))))
+        elif isinstance(x, AEIdMol2) and isinstance (y, EqAtom2):
+            return fEqAtom2(comp0(next(iter(x.eqMol1.mol1s)), next(iter(y.atom2s))))
+        elif isinstance(x, AENonIdMol2) and isinstance(y, AEIdMol2):
+            return fAENonIdMol2(tuple(map(lambda z: comp0(z, y), x.eqAtom2s)))
+        elif isinstance(x, AEIdMol2) and isinstance(y, AENonIdMol2):
+            return fAENonIdMol2(tuple(map(lambda z: comp0(x, z), y.eqAtom2s)))
+
+        if isinstance(x, EqAtom2):
+            x = fAENonIdMol2((x,))
+        if isinstance(y, EqAtom2):
+            y = fAENonIdMol2((y,))
+
+        if isinstance(x, AENonIdMol2) and isinstance(y, AENonIdMol2):
+            return fAENonIdMol2(tuple(map(lambda z: comp0(z, y.source), x.eqAtom2s)) + tuple(map(lambda z: comp0(x.target, z), y.eqAtom2s)))
+
+        if isinstance(x, AEMol2) and isinstance(y, EqAEMol2):
+            return fEqAEMol2(comp0(x, next(iter(y.aeMol2s))))
+        elif isinstance(x, EqAEMol2) and isinstance(y, AEMol2):
+            return fEqAEMol2(comp0(next(iter(x.aeMol2s)), y))
+        elif isinstance(x, EqAEMol2) and isinstance(y, EqAEMol2):
+            return fEqAEMol2(comp0(next(iter(x.aeMol2s)), next(iter(y.aeMol2s))))
+
+    raise Exception("Undetermined comp0 of types %s and %s" % (str(type(x)), str(type(y))))
+
+
+
+
+
+
+
+
+
+
+
+#def comp0(x,y):
+#    if isinstance(x, Prim0):
+#        typeX = Prim0
+#    elif isinstance(x, Prim1):
+#        typeX = Prim1
+#    elif isinstance(x, Prim2):
+#        typeX = Prim2
+#    else:
+#        typeX = type(x)
+#    if isinstance(y, Prim0):
+#        typeY = Prim0
+#    elif isinstance(y, Prim1):
+#        typeY = Prim1
+#    elif isinstance(y, Prim2):
+#        typeY = Prim2
+#    else:
+#        typeY = type(y)
+#    typePair = (typeX, typeY)
+#
+#    if typePair in comp0Table:
+#        return comp0Table[typePair](x,y)
+#    else:
+#        raise Exception("Invalid 0-composition between %s and %s" % (str(type(x)), str(type(y))))
 
 def comp0s(xs):
     result = xs[0]
@@ -622,6 +778,7 @@ def removeSuffixMol0(suffix, mol0):
         return None
 
 # Returns a tuple of (a2',a1',transposeType), where a2' and a1' may be None.
+# By non-degeneracy, they are either left transposable or right, not both.
 def transposeAtom1s(a1,a2):
     xLeft1 = removeSuffixMol0(comp0(a2.p1.source, a2.b0), a1.b0)
     xLeft2 = removePrefixMol0(comp0(a1.a0, a1.p1.target), a2.a0)
@@ -668,10 +825,13 @@ def splitMol1InHalf(m):
 
 eqMol1ByMol1 = {}
 
+# Split in half, find all equivalent mol1s on each side, then optionally transpose across the joint.
+# Every sequence of transpositions should be found by such, and the split allows us to cache
+# sub results.
 def stepEquivalentMol1s(mol1):
-    (left, right) = splitMol1InHalf(mol1)
-    if left == mol1 or right == mol1:
+    if len(mol1) <= 1:
         return set()
+    (left, right) = splitMol1InHalf(mol1)
 
     leftEqs = fEqMol1(left).mol1s
     rightEqs = fEqMol1(right).mol1s
@@ -721,7 +881,7 @@ fAEIdMol2 = buildKeyedBy(aeIdMol2Repo, AEIdMol2)
 aeNonIdMol2Repo = {}
 fAENonIdMol2 = buildKeyedBy(aeNonIdMol2Repo, AENonIdMol2)
 
-eqAtom2ByAtom2 = {}    
+eqAtom2ByAtom2 = {}
 
 def collapseToAtom2(mol1):
     for ii in range(len(mol1.atom1s)):
