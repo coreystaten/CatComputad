@@ -1,9 +1,5 @@
 from ontology import *
 
-
-###########################################################
-# Tensor decomposition, dimension 1
-
 # Gives a set of non-trivial decompositions of mol0 via tensor, as pairs (m1, m2)
 def tensorDecompMol0(mol0):
     decomps = set()
@@ -13,6 +9,21 @@ def tensorDecompMol0(mol0):
         right = fMol0(mol0.prim0s[ii:])
         decomps.add((left, right))
     return decomps
+
+###########################################################
+# Horizontal decomposition, dimension 1
+
+# Returns a list of all non-trivial horizontal decompositions of the eqMol1, as a set of tuples.
+def horizontalDecompEqMol1(eqMol1):
+    decomps = set()
+    for mol1 in eqMol1.mol1s:
+        for ii in range(1, len(mol1)):
+            decomps.add((fEqMol1(takeMol1(mol1, ii)), fEqMol1(dropMol1(mol1, ii))))
+    return decomps
+
+
+###########################################################
+# Tensor decomposition, dimension 1
 
 # Returns a list of all non-trivial prefixes of a tuple (including the whole tuple).
 def nonTrivPrefixes(t):
@@ -145,22 +156,20 @@ def blockTensorDecompMol1(mol1, k):
     return decomps
 
 
+###########################################################
+# Vertical decomposition, dimension 2
 
+# Returns a list of all non-trivial horizontal decompositions of the eqMol1, as a set of tuples.
+def horizontalDecompEqAEMol2(eqAEMol2):
+    decomps = set()
+    for aeMol2 in eqAEMol2.aeMol2s:
+        for ii in range(1, len(aeMol2)):
+            decomps.add((fEqAEMol2(takeAEMol2(aeMol2, ii)), fEqAEMol2(dropAEMol2(aeMol2, ii))))
+    return decomps
 
 
 ##################################################
 # Horizontal decomposition, dimension 2
-
-# Gives a set of non-trivial decompositions of eqMol1 via horizontal composition, as pairs (m1, m2)
-def horizontalDecompMol1(eqMol1):
-    decomps = set()
-    for mol1 in eqMol1.mol1s:
-        # If len(mol1) <= 1, this does nothing.
-        for ii in range(1, len(mol1)):
-            left = fNonIdMol1(mol1.atom1s[:ii])
-            right = fNonIdMol1(mol1.atom1s[ii:])
-        decomps.add((fEqMol1(left), fEqMol1(right)))
-    return decomps
 
 # Returns a pair (m1, m2) with m2 a maximal identity molecule (perhaps 1_{1_cod})
 def maxSuffixDecompAEMol2(aeMol2):
@@ -482,11 +491,6 @@ def blockTensorDecompAEMol2(aeMol2, k):
 
     (g, maxSuffix) = maxTensorSuffixDecompAEMol2(block1Pre)
     (discard, h) = maxTensorPrefixDecompAEMol2(block2Pre)
-
-    print(type(h.source))
-    print(h.source)
-    print(type(maxSuffix))
-    print(maxSuffix)
 
     w = removeTensorSuffixEqMol1(h.source, maxSuffix.eqMol1)
     wDecomps = tensorDecompEqMol1(w)

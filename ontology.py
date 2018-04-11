@@ -474,18 +474,11 @@ comp0Table = {
 }
 
 dimByType = {
-    Prim0: 0,
-    ConstPrim0: 0,
     Mol0: 0,
-    Prim1: 1,
-    ConstPrim1: 1,
-    CollapsePrim1: 1,
     Atom1: 1,
     IdMol1: 1,
     NonIdMol1: 1,
     EqMol1: 1,
-    Prim2: 2,
-    ConstPrim2: 2,
     Atom2: 2,
     EqAtom2: 2,
     AEIdMol2: 2,
@@ -498,7 +491,16 @@ dimByType = {
 }
 
 def dim(x):
-    return dimByType[type(x)]
+    if isinstance(x, Prim0):
+        return 0
+    elif isinstance(x, Prim1):
+        return 1
+    elif isinstance(x, Prim2):
+        return 2
+    elif isinstance(x, Prim3):
+        return 3
+    else:
+        return dimByType[type(x)]
 
 def comp0(x,y):
     maxDim = max(dim(x), dim(y))

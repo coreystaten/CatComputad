@@ -2,6 +2,8 @@ import cProfile
 
 from ontology import *
 from decomp import *
+from fill import *
+from unitor import *
 
 a = prim0ToMol0(ConstPrim0("a"))
 b = prim0ToMol0(ConstPrim0("b"))
@@ -37,3 +39,8 @@ h2 = prim2ToAEMol2(ConstPrim2("h2", x2, x3))
 #bb2 = idPrefixDecompAEMol2(bb1)
 bb3 = fEqAEMol2(comp0s([w,h,w,l]))
 bb4 = tensorDecompEqAEMol2(bb3)
+
+
+cc1 = comp0s([unit, b, unit])
+cc2 = b
+cc3 = findPaths1(cc1, cc2, [unitor10, unitor11])
