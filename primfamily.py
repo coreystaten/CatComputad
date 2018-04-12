@@ -4,7 +4,20 @@ from decomp import *
 class ASTNode(object):
     pass
 
-class PrimFamilyNode(ASTNode):
+class ASTMatch(object):
+    def __init__(self):
+        # Dictionary name => cell
+        self.varMatch = {}
+        # Dictionary (name, "s" or "t", depth) => cell
+        self.stInfo = {}
+
+    def dup(self):
+        m = ASTMatch()
+        m.varMatch = dict(self.varMatch)
+        m.stInfo = dict(self.stInfo)
+        return m
+
+class PrimitiveFamilyNode(ASTNode):
     def __init__(self, family, paramNodes):
         if len(paramNodes) != len(family.signature):
             raise Exception("NodePrimFamily number of nodes does not match family signature.")
@@ -22,7 +35,7 @@ class PrimFamilyNode(ASTNode):
             if (atom1.a0 == fMol0(())) and (atom1.b0 == fMol0(())) and isinstance(atom1.p1, FamilyPrim1):
                 if atom1.p1.family == self.family:
                     newMatches = matchList
-                    for ii in range(self.paramNodes):
+                    for ii in range(len(self.paramNodes)):
                         newMatches = self.paramNodes[ii].match(atom1.p1.params[ii], newMatches)
                     return newMatches
             return []
@@ -31,7 +44,7 @@ class PrimFamilyNode(ASTNode):
             if isinstance(atom2.l1, IdMol1) and isinstance(atom2.r1, IdMol1) and (atom2.a0 == fMol0(())) and (atom2.b0 == fMol0(())) and isinstance(atom2.p2, FamilyPrim2):
                 if atom2.p2.family == self.family:
                     newMatches = matchList
-                    for ii in range(self.paramNodes):
+                    for ii in range(len(self.paramNodes)):
                         newMatches = self.paramNodes[ii].match(atom1.p1.params[ii], newMatches)
                     return newMatches
             return []
@@ -39,10 +52,25 @@ class PrimFamilyNode(ASTNode):
     def eval(self, assignment):
         params = [p.eval(assignment) for p in self.paramNodes]
         prim = self.family.buildPrim(params)
-        if dim(prim) == 1:
-            return fEqMol1(prim1ToMol1(prim))
-        elif dim(prim) == 2:
-            return fEqAEMol2(prim2ToAEMol2(prim))
+        return prim
+        #if dim(prim) == 1:
+        #    return fEqMol1(prim1ToMol1(prim))
+        #elif dim(prim) == 2:
+        #    return fEqAEMol2(prim2ToAEMol2(prim))
+
+    # Func should take a node, and return either a new node or None.  If None, recurse.
+    def alterAST(self, func):
+        newParamNodes = []
+        for p in paramNodes:
+            res = func(p)
+            if res is None:
+                newParamNodes.append(p.alterAST(func))
+            else:
+                newParamNodes.append(res)
+        return PrimitiveFamilyNode(self.family, newParamNodes)
+
+    def __str__(self):
+        return self.family.name + "(" + ", ".join(map(str, self.paramNodes)) + ")"
 
 
 class Comp0Node(ASTNode):
@@ -69,6 +97,22 @@ class Comp0Node(ASTNode):
 
     def eval(self, assignment):
         return comp0(self.leftNode.eval(assignment), self.rightNode.eval(assignment))
+
+    def alterAST(self, func):
+        leftRes = func(self.leftNode)
+        rightRes = func(self.rightNode)
+        if leftRes is None:
+            newLeft = left.alterAST(func)
+        else:
+            newLeft = leftRes
+        if rightRes is None:
+            newRight = right.alterAST(func)
+        else:
+            newRight = rightRes
+        return Comp0Node(newLeft, newRight)
+
+    def __str__(self):
+        return "(" + str(self.leftNode) + " @ " + str(self.rightNode) + ")"
 
 
 class Comp1Node(ASTNode):
@@ -97,6 +141,22 @@ class Comp1Node(ASTNode):
     def eval(self, assignment):
         return comp1(self.leftNode.eval(assignment), self.rightNode.eval(assignment))
 
+    def alterAST(self, func):
+        leftRes = func(self.leftNode)
+        rightRes = func(self.rightNode)
+        if leftRes is None:
+            newLeft = left.alterAST(func)
+        else:
+            newLeft = leftRes
+        if rightRes is None:
+            newRight = right.alterAST(func)
+        else:
+            newRight = rightRes
+        return Comp1Node(newLeft, newRight)
+
+    def __str__(self):
+        return "(" + str(self.leftNode) + " . " + str(self.rightNode) + ")"
+
 
 class Comp2Node(ASTNode):
     def __init__(self, leftNode, rightNode):
@@ -119,6 +179,22 @@ class Comp2Node(ASTNode):
 
     def eval(self, assignment):
         return comp2(self.leftNode.eval(assignment), self.rightNode.eval(assignment))
+
+    def alterAST(self, func):
+        leftRes = func(self.leftNode)
+        rightRes = func(self.rightNode)
+        if leftRes is None:
+            newLeft = left.alterAST(func)
+        else:
+            newLeft = leftRes
+        if rightRes is None:
+            newRight = right.alterAST(func)
+        else:
+            newRight = rightRes
+        return Comp2Node(newLeft, newRight)
+
+    def __str__(self):
+        return "(" + str(self.leftNode) + " & " + str(self.rightNode) + ")"
 
 
 
@@ -146,10 +222,81 @@ class IdNode(ASTNode):
     def eval(self, assignment):
         base = self.subNode.eval(assignment)
         if dim(base) == 0:
-            return fEqMol1(fIdMol1(base))
+            return fIdMol1(base)
         if dim(base) == 1:
-            return fEqAEMol2(fAEIdMol2(base))
+            return fAEIdMol2(ensureEqMol1(base))
 
+    def alterAST(self, func):
+        res = func(self.subNode)
+        if res is None:
+            return IdNode(self.subNode.alterAST(func))
+        else:
+            return IdNode(res)
+
+    def __str__(self):
+        return "1_{" + str(self.subNode) + "}"
+
+def _repeat(f, x, n):
+    for ii in range(n):
+        x = f(x)
+    return x
+
+# Checks if it is ok to set the given depth's source or target of the given var to cell
+def _isCompatibleSetSourceTarget(name, sOrT, depth, cell, match):
+    if name in match.varMatch:
+        if sOrT == "s":
+            source = _repeat(lambda x: x.source, match.varMatch[name], depth)
+            if source != cell:
+                return False
+        elif sOrT == "t":
+            target = _repeat(lambda x: x.target, match.varMatch[name], depth)
+            if target != cell:
+                return False
+    for key in match.stInfo:
+        (name2, sOrT2, depth2) = key
+        if name == name2:
+            if depth == depth2 and sOrT == sOrT2:
+                if cell != match.stInfo[key]:
+                    return False
+            elif depth < depth2:
+                increment = depth2 - depth
+                if sOrT2 == "s":
+                    source = _repeat(lambda x: x.source, cell, increment)
+                    if source != match.stInfo[key]:
+                        return False
+                elif sOrT2 == "t":
+                    target = _repeat(lambda x: x.target, cell, increment)
+                    if target != match.stInfo[key]:
+                        return False
+            elif depth > depth2:
+                increment = depth - depth2
+                if sOrT2 == "s":
+                    source = _repeat(lambda x: x.source, match.stInfo[key], increment)
+                    if source != cell:
+                        return False
+                elif sOrT2 == "t":
+                    target = _repeat(lambda x: x.target, match.stInfo[key], increment)
+                    if target != cell:
+                        return False
+    return True
+
+# Checks if is ok set name=cell in the match.
+def _isCompatibleSetCell(name, cell, match):
+    if name in match.varMatch:
+        if cell != match[name]:
+            return False
+    for key in match.stInfo:
+        (n, sOrT, depth) = key
+        if n == name:
+            if sOrT == "s":
+                source = _repeat(lambda x: x.source, cell, depth)
+                if source != match.stInfo[key]:
+                    return False
+            elif sOrT == "t":
+                target = _repeat(lambda x: x.target, cell, depth)
+                if target != match.stInfo[key]:
+                    return False
+    return True
 
 class VarNode(ASTNode):
     # Name is an integer index when used in primitive family source/target ASTs
@@ -160,18 +307,94 @@ class VarNode(ASTNode):
     def match(self, target, matchList):
         updatedMatches = []
         for match in matchList:
-            if self.name in match:
-                if target == match[self.name]:
-                    updatedMatches.append(match)
-                # Leave it out if it doesn't match.
-            else:
-                new = dict(match)
-                new[self.name] = target
+            if _isCompatibleSetCell(self.name, target, match):
+                new = match.dup()
+                new.varMatch[self.name] = target
                 updatedMatches.append(new)
         return updatedMatches
 
     def eval(self, assignment):
         return assignment[self.name]
+
+    def alterAST(self, func):
+        return self
+
+    def __str__(self):
+        return str(self.name)
+
+# Source and target nodes are only applied to VarNodes and other source/target nodes.
+class SourceNode(ASTNode):
+    def __init__(self, subNode):
+        if isinstance(subNode, VarNode):
+            self.depth = 1
+            self.varName = subNode.name
+        elif isinstance(subNode, SourceNode) or isinstance(subNode, TargetNode):
+            self.depth = 1 + subNode.depth
+            self.varName = subNode.varName
+        else:
+            raise Exception("SourceNode does not descend to VarNode.")
+        self.subNode = subNode
+        self.size = 1 + subNode.size
+
+
+    def match(self, target, matchList):
+        updatedMatches = []
+        for match in matchList:
+            if _isCompatibleSetSourceTarget(self.varName, "s", self.depth, target, match):
+                new = match.dup()
+                new.stInfo[(self.varName, "s", self.depth)] = target
+                updatedMatches.append(new)
+        return updatedMatches
+
+    def eval(self, assignment):
+        return self.subNode.eval(assignment).source
+
+    def alterAST(self, func):
+        res = func(self.subNode)
+        if res is None:
+            return SourceNode(self.subNode.alterAST(func))
+        else:
+            return SourceNode(res)
+
+    def __str__(self):
+        return "#s(" + str(self.subNode) + ")"
+
+class TargetNode(ASTNode):
+    def __init__(self, subNode):
+        if isinstance(subNode, VarNode):
+            self.depth = 1
+            self.varName = subNode.name
+        elif isinstance(subNode, SourceNode) or isinstance(subNode, TargetNode):
+            self.depth = 1 + subNode.depth
+            self.varName = subNode.varName
+        else:
+            raise Exception("TargetNode does not descend to VarNode.")
+        self.subNode = subNode
+        self.size = 1 + subNode.size
+
+
+    def match(self, target, matchList):
+        updatedMatches = []
+        for match in matchList:
+            if _isCompatibleSetSourceTarget(self.varName, "t", self.depth, target, match):
+                new = match.dup()
+                new.stInfo[(self.varName, "t", self.depth)] = target
+                updatedMatches.append(new)
+        return updatedMatches
+
+    def eval(self, assignment):
+        return self.subNode.eval(assignment).target
+
+    def alterAST(self, func):
+        res = func(self.subNode)
+        if res is None:
+            return TargetNode(self.subNode.alterAST(func))
+        else:
+            return TargetNode(res)
+
+    def __str__(self):
+        return "#t(" + str(self.subNode) + ")"
+
 
 class ConstNode(ASTNode):
     def __init__(self, prim):
@@ -193,6 +416,18 @@ class ConstNode(ASTNode):
     def eval(self, assignment):
         return self.matchTarget
 
+    def alterAST(self, func):
+        return self
+
+    def __str__(self):
+        return str(self.prim)
+
+def alterAST(func, ast):
+    res = func(ast)
+    if res is None:
+        return ast.alterAST(func)
+    else:
+        return res
 
 # Takes a list [x, y, z], and returns a dict {0:x, 1:y, 2:z}
 def listToIndexDict(l):
@@ -211,8 +446,8 @@ class FamilyPrim1(Prim1):
     def __init__(self, family, params):
         self.family = family
         self.params = params
-        self.source = self.family.sourceAst.eval(listToIndexDict(self.params))
-        self.target = self.family.targetAst.eval(listToIndexDict(self.params))
+        self.source = self.family.sourceAST.eval(listToIndexDict(self.params))
+        self.target = self.family.targetAST.eval(listToIndexDict(self.params))
 
     def __str__(self):
         return self.family.strParams(self.params)
@@ -221,18 +456,30 @@ class FamilyPrim2(Prim2):
     def __init__(self, family, params):
         self.family = family
         self.params = params
-        self.source = self.family.sourceAst.eval(listToIndexDict(self.params))
-        self.target = self.family.targetAst.eval(listToIndexDict(self.params))
+        self.source = self.family.sourceAST.eval(listToIndexDict(self.params))
+        self.target = self.family.targetAST.eval(listToIndexDict(self.params))
+        # Atom2s won't have well-defined source/target if we don't select an instance.
+        if isinstance(self.source, EqMol1):
+            self.source = next(iter(self.source.mol1s))
+        if isinstance(self.target, EqMol1):
+            self.target = next(iter(self.target.mol1s))
+        super(FamilyPrim2, self).__init__()
+
 
     def __str__(self):
         return self.family.strParams(self.params)
+
+    def __repr__(self):
+        return "FamilyPrim2(" + self.family.name + ", " + repr(self.params) + ")"
 
 class FamilyPrim3(Prim3):
     def __init__(self, family, params):
         self.family = family
         self.params = params
-        self.source = self.family.sourceAst.eval(listToIndexDict(self.params))
-        self.target = self.family.targetAst.eval(listToIndexDict(self.params))
+        self.source = self.family.sourceAST.eval(listToIndexDict(self.params))
+        self.target = self.family.targetAST.eval(listToIndexDict(self.params))
+        # Atom3s won't have well-defined source/target if we don't select an instance.
+        raise "Unimplemented"
 
     def __str__(self):
         return self.family.strParams(self.params)
@@ -240,12 +487,21 @@ class FamilyPrim3(Prim3):
 class PrimitiveFamily(object):
     # Signature is a list of dimensions, one for each parameter slot.  E.g. [1,1,1] takes three arguments, all of dimension 1.
     # AST VarNodes are to be named after the index of each parameter, as an integer.
-    def __init__(self, name, dim, signature, sourceAst, targetAst):
+    def __init__(self, name, dim, signature, sourceAST, targetAST, adj=None):
         self.name = name
         self.dim = dim
         self.signature = signature
-        self.sourceAst = sourceAst
-        self.targetAst = targetAst
+        self.sourceAST = sourceAST
+        self.targetAST = targetAST
+        if adj is None:
+            self.adj = PrimitiveFamily(name + "_adj", dim, signature, targetAST, sourceAST, self)
+        else:
+            self.adj = adj
+        self.primByParams = {}
+        # Hook for filtering degenerate instances.  Used by filling, write a hook for families that have degenerate or expanding primitive instances.
+        # TODO: Don't use hook if we're already limiting instances of the prim.
+        self.isDegen = lambda params: False
+
 
     def buildPrim(self, params):
         # Need as an ordered list.
@@ -257,15 +513,35 @@ class PrimitiveFamily(object):
                 if dim(params[ii]) != self.signature[ii]:
                     raise Exception("Signature error")
 
-        if self.dim == 1:
-            return FamilyPrim1(self, params)
-        elif self.dim == 2:
-            return FamilyPrim2(self, params)
-        elif self.dim == 3:
-            return FamilyPrim3(self, params)
+        # Make sure parameters are in equivalence form.
+        adjParams = []
+        for p in params:
+            if dim(p) == 0:
+                adjParams.append(ensureMol0(p))
+            elif dim(p) == 1:
+                adjParams.append(ensureEqMol1(p))
+            elif dim(p) == 2:
+                adjParams.append(ensureEqAEMol2(p))
+        params = adjParams
+
+        parTup = tuple(params)
+        if parTup in self.primByParams:
+            return self.primByParams[parTup]
+        else:
+            if self.dim == 1:
+                prim = FamilyPrim1(self, params)
+            elif self.dim == 2:
+                prim = FamilyPrim2(self, params)
+            elif self.dim == 3:
+                prim = FamilyPrim3(self, params)
+            self.primByParams[parTup] = prim
+            return prim
 
     def strParams(self, params):
         return self.name + "(" + ", ".join(map(str, params)) + ")"
+
+    def __str__(self):
+        return self.name
 
 # All of the below take a molecule and attempt to make an AST from it, replacing paramPrims wherever they occur with VarNodes named by their index in the paramPrims list
 def astFromMol0(mol0, paramPrims):
@@ -349,6 +625,18 @@ def minimalASTFromEqMol1(eqMol1, paramPrims):
             if atom1.p1 in paramPrims:
                 name = paramPrims.index(atom1.p1)
                 return VarNode(name)
+            elif isinstance(atom1.p1, FamilyPrim1):
+                paramNodes = []
+                for ii in range(len(atom1.p1.family.signature)):
+                    dim = atom1.p1.family.signature[ii]
+                    par = atom1.p1.params[ii]
+                    if dim == 0:
+                        paramNodes.append(minimalASTFromMol0(par, paramPrims))
+                    elif dim == 1:
+                        paramNodes.append(minimalASTFromEqMol1(par, paramPrims))
+                    elif dim == 2:
+                        paramNodes.append(minimalASTFromEqAEMol2(par, paramPrims))
+                return PrimitiveFamilyNode(atom1.p1.family, paramNodes)
             else:
                 return ConstNode(atom1.p1)
     tensorDecomps = tensorDecompEqMol1(eqMol1)
@@ -364,13 +652,25 @@ def minimalASTFromEqMol1(eqMol1, paramPrims):
 def minimalASTFromEqAEMol2(eqAEMol2, paramPrims):
     if len(eqAEMol2) == 0:
         aeIdMol2 = next(iter(eqAEMol2.aeMol2s))
-        return IdNode(minimalASTFromEqMol1(aeIdMol2.eqMol1))
+        return IdNode(minimalASTFromEqMol1(aeIdMol2.eqMol1, paramPrims))
     elif len(eqAEMol2) == 1:
-        atom2 = next(iter(next(iter(eqAEMol2.aeMol2s)).eqAtom2s[0]))
+        atom2 = next(iter(next(iter(eqAEMol2.aeMol2s)).eqAtom2s[0].atom2s))
         if len(atom2.a0) == 0 and len(atom2.b0) == 0 and len(atom2.l1) == 0 and len(atom2.r1) == 0:
             if atom2.p2 in paramPrims:
                 name = paramPrims.index(atom2.p2)
                 return VarNode(name)
+            elif isinstance(atom2.p2, FamilyPrim2):
+                paramNodes = []
+                for ii in range(len(atom2.p2.family.signature)):
+                    dim = atom2.p2.family.signature[ii]
+                    par = atom2.p2.params[ii]
+                    if dim == 0:
+                        paramNodes.append(minimalASTFromMol0(par, paramPrims))
+                    elif dim == 1:
+                        paramNodes.append(minimalASTFromEqMol1(par, paramPrims))
+                    elif dim == 2:
+                        paramNodes.append(minimalASTFromEqAEMol2(par, paramPrims))
+                return PrimitiveFamilyNode(atom2.p2.family, paramNodes)
             else:
                 return ConstNode(atom2.p2)
     tensorDecomps = tensorDecompEqAEMol2(eqAEMol2)

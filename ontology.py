@@ -55,12 +55,11 @@ class ConstPrim1(Prim1):
 class CollapsePrim1(Prim1):
     def __init__(self,prim2):
         self.prim2 = prim2
-        self.name = "collapse(" + prim2.name + ")"
         self.source = prim2.source.source
         self.target = prim2.target.target
 
     def __repr__(self):
-        return self.name
+        return "collapse(" + str(self.prim2) + ")"
 
 class Atom1(IdHashed):
     def __init__(self,a0,p1,b0):
@@ -128,6 +127,10 @@ class NonIdMol1(Mol1):
 
 class EqMol1(IdHashed):
     def __init__(self, mol1s):
+        for inst in mol1s:
+            if not(isinstance(inst, Mol1)):
+                raise Exception("ERROR")
+
         self.mol1s = mol1s
         self.length = len(next(iter(self.mol1s)))
         self.source = next(iter(self.mol1s)).source
@@ -162,12 +165,17 @@ class ConstPrim2(Prim2):
 
 class Atom2(IdHashed):
     def __init__(self,l1,a0,p2,b0,r1):
+        if not(isinstance(l1, Mol1) and isinstance(a0, Mol0) and isinstance(p2, Prim2) and isinstance(b0, Mol0) and isinstance(r1, Mol1)):
+            raise Exception("Invalid Atom2 construction.")
+
         self.l1 = l1
         self.a0 = a0
         self.p2 = p2
         self.b0 = b0
         self.r1 = r1
         self.source = comp1s([self.l1, comp0s([self.a0, self.p2.source, self.b0]), self.r1])
+        if not(isinstance(self.source, Mol1)):
+            raise Exception("Invalid source")
         self.target = comp1s([self.l1, comp0s([self.a0, self.p2.target, self.b0]), self.r1])
         self.collapse = comp1s([self.l1, comp0s([self.a0, self.p2.collapse, self.b0]), self.r1])
 
@@ -198,6 +206,10 @@ class Atom2(IdHashed):
 
 class EqAtom2(IdHashed):
     def __init__(self,atom2s):
+        for inst in atom2s:
+            if not(isinstance(inst, Atom2)):
+                raise Exception("ERROR")
+
         self.atom2s = atom2s
         self.righthand = min(self.atom2s, key=lambda x: len(x.l1.atom1s))
         self.lefthand = min(self.atom2s, key=lambda x: len(x.r1.atom1s))
@@ -281,43 +293,53 @@ class ConstPrim3(Prim3):
     def __repr__(self):
         return self.name
 
-class Atom3(IdHashed):
-    def __init__(t2, l1, a0, p3, b0, r1, b2):
-        self.t2 = t2
-        self.l1 = l1
-        self.a0 = a0
-        self.p3 = p3
-        self.b0 = b0
-        self.r1 = r1
-        self.b2 = b2
-        self.source = comp2s([t2, comp1s([l1, comp0s([a0, p3.source, b0]), r1]), b2])
-        self.target = comp2s([t2, comp1s([l1, comp0s([a0, p3.target, b0]), r1]), b2])
+# Components of StepCell3 are up to equivalence, since they're just an output format.
+# Composition order is the same as for a 3-atom.
+class StepCell3(IdHashed):
+    def __init__(top, l, a, p, b, r, bot):
+        self.top = top
+        self.l = l
+        self.a = a
+        self.p = p
+        self.b = b
+        self.r = r
+        self.bot = bot
+        self.source = comp2s([top, comp1s([l, comp0s([a, p3.source, b]), r]), bot])
+        self.target = comp2s([top, comp1s([l, comp0s([a, p3.target, b]), r]), bot])
 
     def __str__(self):
+        _top = asLowestDim(top)
+        _l = asLowestDim(l)
+        _a = asLowestDim(a)
+        _b = asLowestDim(b)
+        _r = asLowestDim(r)
+        _bot = asLowestDim(bot)
+
         part2s = []
         part1s = []
         part0s = []
-        if len(self.t2):
-            parts2.append(str(self.t2))
-        if len(self.l1):
-            part1s.append(str(self.l1))
-        if len(self.a0):
-            part0s.append(str(self.a0))
-        part0s.append(str(self.p2))
-        if len(self.b0):
-            part0s.append(str(self.b0))
+
+        if not(isinstance(_top, EqMol1)):
+            part2s.append(str(_top))
+        if not(isinstance(_l, Mol0)):
+            part1s.append(str(_l))
+        if not(isinstance(_a, Mol0) and len(a) == 0):
+            part0s.append(str(_a))
+        part0s.append(str(self.p))
+        if not(isinstance(_b, Mol0) and len(b) == 0):
+            part0s.append(str(_b))
         if len(part0s) > 1:
             part1s.append("(" + " @ ".join(part0s) + ")")
         else:
             part1s.append(part0s[0])
-        if len(self.r1):
-            part1s.append(str(self.r1))
+        if not(isinstance(_r, Mol0)):
+            part1s.append(str(_r))
         if len(part1s) > 1:
             part2s.append("(" + " . ".join(part1s) + ")")
         else:
             part2s.append(part1s[0])
-        if len(self.b2):
-            part2s.append(str(self.b2))
+        if not(isinstance(_bot, EqMol1)):
+            part2s.append(str(_bot))
         if len(part2s) > 1:
             return " & ".join(part2s)
         else:
@@ -325,32 +347,80 @@ class Atom3(IdHashed):
 
 
     def __repr__(self):
-        return "Atom3(" + repr(self.t2) + ", " + repr(self.l1) + ", " + repr(self.a0) + ", " + repr(self.p3) + ", " + repr(self.b0) + ", " + repr(self.r1) + ", " + repr(self.b2) + ")"
+        return "StepCell3(" + repr(self.top) + ", " + repr(self.l) + ", " + repr(self.a) + ", " + repr(self.p) + ", " + repr(self.b) + ", " + repr(self.r) + ", " + repr(self.bot) + ")"
 
-class Mol3(IdHashed):
-    pass
-
-class IdMol3(Mol3):
-    def __init__(self, aeMol2):
-        self.aeMol2 = aeMol2
-        self.atom3s = ()
-        self.source = aeMol2
-        self.target = aeMol2
+class CompCell3(IdHashed):
+    def __init__(self, stepCell3s):
+        self.stepCell3s = stepCell3s
+        self.source = self.stepCell3s[0].source
+        self.target = self.stepCell3s[-1].target
 
     def __len__(self):
-        return 0
-
-class NonIdMol3(Mol3):
-    def __init__(self, atom3s):
-        self.atom3s = atom3s
-        self.source = self.atom3s[0].source
-        self.target = self.atom3s[-1].target
-
-    def __len__(self):
-        return len(self.atom3s)
+        return len(self.stepCell3s)
 
     def __repr__(self):
-        return "Mol3(" + ", ".join(map(repr, self.atom3s)) + ")"
+        return "CompCell3(" + ", ".join(map(repr, self.stepCell3s)) + ")"
+
+class Functor(IdHashed):
+    def __init__(self, name):
+        self.name = name
+
+    def __str__(self):
+        return self.name
+
+    def __repr__(self):
+        return "Functor(" + self.name + ")"
+
+# FunctorPrims represent cells inside of a functor application.
+class FunctorPrim0(Prim0):
+    def __init__(self, functor, mol0):
+        self.functor = functor
+        self.mol0 = mol0
+
+    def __str__(self):
+        return str(self.functor) + "(" + str(self.mol0) + ")"
+
+    def __repr__(self):
+        return "FunctorPrim0(" + repr(self.functor) + ", " + repr(self.mol0) + ")"
+
+class FunctorPrim1(Prim1):
+    def __init__(self, functor, eqMol1):
+        self.functor = functor
+        self.eqMol1 = eqMol1
+        self.source = fFunctorPrim0(functor, eqMol1.source)
+        self.target = fFunctorPrim0(functor, eqMol1.target)
+
+    def __str__(self):
+        return str(self.functor) + "(" + str(self.eqMol1) + ")"
+
+    def __repr__(self):
+        return "FunctorPrim1(" + repr(self.functor) + ", " + repr(eself.qMol1) + ")"
+
+class FunctorPrim2(Prim2):
+    def __init__(self, functor, eqAEMol2):
+        self.functor = functor
+        self.eqAEMol2 = eqAEMol2
+        self.source = fFunctorPrim1(functor, eqAEMol2.source)
+        self.target = fFunctorPrim1(functor, eqAEMol2.target)
+
+    def __str__(self):
+        return str(self.functor) + "(" + str(self.eqAEMol2) + ")"
+
+    def __repr__(self):
+        return "FunctorPrim2(" + repr(self.functor) + ", " + repr(self.eqAEMol2) + ")"
+
+class FunctorPrim3(Prim3):
+    def __init__(self, functor, cell3):
+        self.functor = functor
+        self.cell3 = cell3
+        self.source = fFunctorPrim2(functor, cell3.source)
+        self.target = fFunctorPrim2(functor, cell3.target)
+
+    def __str__(self):
+        return str(self.functor) + "(" + str(self.cell3) + ")"
+
+    def __repr__(self):
+        return "FunctorPrim3(" + repr(self.functor) + ", " + repr(self.cell3) + ")"
 
 
 class TransposeType(Enum):
@@ -396,13 +466,13 @@ def dropMol1(mol1, n):
 
 def takeAEMol2(aeMol2, n):
     if n <= 0:
-        return fIdMol2(aeMol2.source)
-    return fNonIdMol2(take(aeMol2.eqAtom2s, n))
+        return fAEIdMol2(aeMol2.source)
+    return fAENonIdMol2(take(aeMol2.eqAtom2s, n))
 
 def dropAEMol2(aeMol2, n):
     if n >= len(aeMol2):
-        return fIdMol2(aeMol2.target)
-    return fNonIdMol2(drop(aeMol2.eqAtom2s, n))
+        return fAEIdMol2(aeMol2.target)
+    return fAENonIdMol2(drop(aeMol2.eqAtom2s, n))
 
 def prim0ToMol0(p):
     return fMol0((p,))
@@ -424,6 +494,49 @@ def prim2ToEqAtom2(p):
 
 def prim2ToAEMol2(p):
     return fAENonIdMol2((prim2ToEqAtom2(p),))
+
+# asPrimN functions take an equivalence cell (Mol0, EqMol1, or EqAEMol2) and attempt to cast them as a single primitive.
+# If they are not just a single primitive, they return None.
+def asPrim0(mol0):
+    if len(mol0) == 1:
+        return mol0.prim0s[0]
+    return None
+
+def asPrim1(eqMol1):
+    inst = next(iter(eqMol1.mol1s))
+    if len(inst) == 1:
+        atom = inst.atom1s[0]
+        if len(atom.a0) == 0 and len(atom.b0) == 0:
+            return atom.p1
+    return None
+
+def asPrim2(eqAEMol2):
+    inst = next(iter(eqAEMol2.aeMol2s))
+    if len(inst) == 1:
+        eqAtom2 = inst.eqAtom2s[0]
+        atInst = next(iter(eqAtom2.atom2s))
+        if len(atInst.a0) == 0 and len(atInst.b0) == 0 and len(atInst.l1) == 0 and len(atInst.r1) == 0:
+            return atom.p2
+    return None
+
+# Takes any cell and, if it's an identity, returns its lowest dimensional representative.  Otherwise returns the cell.
+def asLowestDim(cell):
+    result = cell
+    if isinstance(cell, EqAEMol2):
+        cell = next(iter(cell.aeMol2s))
+    if isinstance(cell, AEIdMol2):
+        cell = cell.eqMol1
+        result = cell
+    if isinstance(cell, EqMol1):
+        cell = next(iter(cell.mol1s))
+    if isinstance(cell, IdMol1):
+        cell = cell.mol0
+        result = cell
+    return result
+
+def isIdMol1(p):
+    if isinstance(p, IdMol1) or (isinstance(p, EqMol1) and isinstance(next(iter(p.mol1s)), IdMol1)):
+        return True
 
 def source0(x):
     if type(x) in [Atom1, IdMol1, NonIdMol1, EqMol1] or isinstance(x, Prim1):
@@ -485,9 +598,8 @@ dimByType = {
     AENonIdMol2: 2,
     EqAEMol2: 2,
     Prim3: 3,
-    Atom3: 3,
-    IdMol3: 3,
-    NonIdMol3: 3
+    StepCell3: 3,
+    CompCell3: 3
 }
 
 def dim(x):
@@ -501,6 +613,9 @@ def dim(x):
         return 3
     else:
         return dimByType[type(x)]
+
+
+
 
 def comp0(x,y):
     maxDim = max(dim(x), dim(y))
@@ -655,6 +770,7 @@ comp1Table = {
     (NonIdMol1, IdMol1): lambda x, y: x,
     (IdMol1, NonIdMol1): lambda x, y: y,
     (NonIdMol1, NonIdMol1): lambda x, y: fNonIdMol1(x.atom1s + y.atom1s),
+    (EqMol1, EqMol1): lambda x, y: fEqMol1(comp1(next(iter(x.mol1s)), next(iter(y.mol1s)))),
 
     (IdMol1, Atom2): lambda x, y: y,
     (Atom2, IdMol1): lambda x, y: x,
@@ -678,24 +794,87 @@ comp1Table = {
 
 def comp1(x,y):
     if target0(x) != source0(y):
-        print(target0(x))
-        print(source0(y))
         raise Exception("Source target mismatch in 1-composition: %s and %s" % (repr(x), repr(y)))
 
-    if isinstance(x, Prim1):
-        typeX = Prim1
-    else:
-        typeX = type(x)
-    if isinstance(y, Prim1):
-        typeY = Prim1
-    else:
-        typeY = type(y)
-    typePair = (typeX, typeY)
+    typeX = type(x)
+    typeY = type(y)
+    maxDim = max(dim(x), dim(y))
 
-    if typePair in comp1Table:
-        return comp1Table[typePair](x,y)
-    else:
-        raise Exception("Invalid 1-composition between %s and %s" % (str(type(x)), str(type(y))))
+    if maxDim == 3:
+        raise Exception("Unimplemented")
+
+    if maxDim >= 1:
+        if isinstance(x, Prim1):
+            x = prim1ToMol1(x)
+        elif isinstance(x, Atom1):
+            x = fNonIdMol1((x,))
+        if isinstance(y, Prim1):
+            y = prim1ToMol1(y)
+        elif isinstance(y, Atom1):
+            y = fNonIdMol1((y,))
+
+        if isinstance(x, IdMol1) and isinstance(x, Mol1):
+            return y
+        elif isinstance(x, Mol1) and isinstance(y, IdMol1):
+            return x
+        elif isinstance(x, NonIdMol1) and isinstance(y, NonIdMol1):
+            return fNonIdMol1(x.atom1s + y.atom1s)
+
+        if isinstance(x, EqMol1) and isinstance(y, EqMol1):
+            return fEqMol1(comp1(next(iter(x.mol1s)), next(iter(y.mol1s))))
+        elif isinstance(x, Mol1) and isinstance(y, EqMol1):
+            return fEqMol1(comp1(x, next(iter(y.mol1s))))
+        elif isinstance(x, EqMol1) and isinstance(y, Mol1):
+            return fEqMol1(comp1(next(iter(x.mol1s)), y))
+    if maxDim == 2:
+        if isinstance(x, Mol1) and isinstance(y, Atom2):
+            return fAtom2(comp1(x, y.l1), y.a0, y.p2, y.b0, y.r1)
+        elif isinstance(x, Atom2) and isinstance(y, Mol1):
+            return fAtom2(x.l1, x.a0, x.p2, x.b0, comp1(x.r1, y))
+
+        if isinstance(x, Mol1):
+            x = fAEIdMol2(fEqMol1(x))
+        elif isinstance(x, EqMol1):
+            x = fAEIdMol2(x)
+        if isinstance(y, Mol1):
+            y = fAEIdMol2(fEqMol1(y))
+        elif isinstance(y, EqMol1):
+            y = fAEIdMol2(y)
+
+        if isinstance(x, AEIdMol2) and isinstance(y, EqAtom2):
+            inst = y.righthand
+            return fEqAtom2(fAtom2(comp1(next(iter(x.eqMol1.mol1s)), inst.l1), inst.a0, inst.p2, inst.b0, inst.r1))
+        elif isinstance(x, EqAtom2) and isinstance(y, AEIdMol2):
+            inst = x.righthand
+            return fEqAtom2(fAtom2(inst.l1, inst.a0, inst.p2, inst.b0, comp1(inst.r1, next(iter(y.eqMol1.mol1s)))))
+
+        if isinstance(x, Atom2):
+            x = fAENonIdMol2((fEqAtom2(x),))
+        elif isinstance(x, EqAtom2):
+            x = fAENonIdMol2((x,))
+        if isinstance(y, Atom2):
+            y = fAENonIdMol2((fEqAtom2(y),))
+        elif isinstance(y, EqAtom2):
+            y = fAENonIdMol2((y,))
+
+        if isinstance(x, AEIdMol2) and isinstance(y, AEIdMol2):
+            return fAEIdMol2(comp1(x.mol1, y.mol1))
+        elif isinstance(x, AEIdMol2) and isinstance(y, AENonIdMol2):
+            return fAENonIdMol2(tuple(map(lambda z: comp1(x, z), y.eqAtom2s)))
+        elif isinstance(x, AENonIdMol2) and isinstance(y, AEIdMol2):
+            return fAENonIdMol2(tuple(map(lambda z: comp1(z, y), x.eqAtom2s)))
+        elif isinstance(x, AENonIdMol2) and isinstance(y, AENonIdMol2):
+            return comp2(comp1(x, y.source), comp1(x.target, y))
+
+        if isinstance(x, AEMol2):
+            x = fEqAEMol2(x)
+        if isinstance(y, AEMol2):
+            y = fEqAEMol2(y)
+
+        if isinstance(x, EqAEMol2) and isinstance(y, EqAEMol2):
+            return fEqAEMol2(comp1(next(iter(x.aeMol2s)), next(iter(y.aeMol2s))))
+
+    raise Exception("Undetermined comp1 of types %s and %s" % (str(typeX), str(typeY)))
 
 
 def comp1s(xs):
@@ -711,24 +890,42 @@ comp2Table = {
     (AENonIdMol2, AENonIdMol2): lambda x, y: fAENonIdMol2(x.eqAtom2s + y.eqAtom2s)
 }
 
+
 def comp2(x,y):
-    if x.target != y.source:
+    if ensureEqMol1(x.target) != ensureEqMol1(y.source):
         raise Exception("Source target mismatch in 2-composition: %s and %s" % (repr(x), repr(y)))
 
-    if isinstance(x, Prim2):
-        typeX = Prim2
-    else:
-        typeX = type(x)
-    if isinstance(y, Prim2):
-        typeY = Prim2
-    else:
-        typeY = type(y)
-    typePair = (typeX, typeY)
+    maxDim = max(dim(x), dim(y))
 
-    if typePair in comp2Table:
-        return comp2Table[typePair](x,y)
-    else:
-        raise Exception("Invalid 2-composition between %s and %s" % (str(type(x)), str(type(y))))
+    if maxDim == 2:
+        if isinstance(x, Prim2):
+            x = prim2ToAEMol2(x)
+        elif isinstance(x, Atom2):
+            x = fAENonIdMol2((fEqAtom2(x),))
+        elif isinstance(x, EqAtom2):
+            x = fAENonIdMol2((x,))
+        if isinstance(y, Prim2):
+            y = prim2ToAEMol2(y)
+        elif isinstance(y, Atom2):
+            y = fAENonIdMol2((fEqAtom2(y),))
+        elif isinstance(y, EqAtom2):
+            y = fAENonIdMol2((y,))
+
+        if isinstance(x, AEIdMol2) and isinstance(y, AEMol2):
+            return y
+        elif isinstance(x, AEMol2) and isinstance(y, AEIdMol2):
+            return x
+        elif isinstance(x, AENonIdMol2) and isinstance(y, AENonIdMol2):
+            return fAENonIdMol2(x.eqAtom2s + y.eqAtom2s)
+        elif isinstance(x, EqAEMol2) and isinstance(y, AEMol2):
+            return fEqAEMol2(comp2(next(iter(x.aeMol2s)), y))
+        elif isinstance(x, AEMol2) and isinstance(y, EqAEMol2):
+            return fEqAEMol2(comp2(x, next(iter(y.aeMol2s))))
+        elif isinstance(x, EqAEMol2) and isinstance(y, EqAEMol2):
+            return fEqAEMol2(comp2(next(iter(x.aeMol2s)), next(iter(y.aeMol2s))))
+
+
+    raise Exception("Undetermined comp2 of types %s and %s" % (str(type(x)), str(type(y))))
 
 
 def comp2s(xs):
@@ -736,6 +933,14 @@ def comp2s(xs):
     for x in xs[1:]:
         result = comp2(result,x)
     return result
+
+def comp3(x,y):
+    if isinstance(x, StepCell3):
+        x = CompCell3([x])
+    if isinstance(y, StepCell3):
+        y = CompCell3([y])
+
+    return CompCell3(x.stepCell3s + y.stepCell3s)
 
 
 def buildKeyedBy(repo, construct):
@@ -749,6 +954,18 @@ def buildKeyedBy(repo, construct):
             repo[k] = obj
             return obj
     return buildFunc
+
+fFunctorPrim0Repo = {}
+fFunctorPrim0 = buildKeyedBy(fFunctorPrim0Repo, FunctorPrim0)
+
+fFunctorPrim1Repo = {}
+fFunctorPrim1 = buildKeyedBy(fFunctorPrim1Repo, FunctorPrim1)
+
+fFunctorPrim2Repo = {}
+fFunctorPrim2 = buildKeyedBy(fFunctorPrim2Repo, FunctorPrim2)
+
+fFunctorPrim3Repo = {}
+fFunctorPrim3 = buildKeyedBy(fFunctorPrim3Repo, FunctorPrim3)
 
 mol0Repo = {}
 fMol0 = buildKeyedBy(mol0Repo, Mol0)
@@ -896,6 +1113,31 @@ def findEquivalentAtom2s(atom2):
     eqCollapse = fEqMol1(atom2.collapse)
     return frozenset(map(collapseToAtom2, eqCollapse.mol1s))
 
+
+def ensureMol0(x):
+    if isinstance(x, Prim0):
+        x = prim0ToMol0(x)
+    return x
+
+def ensureEqMol1(x):
+    if isinstance(x, Prim1):
+        x = prim1ToMol1(x)
+    elif isinstance(x, Atom1):
+        x = fNonIdMol1((x,))
+    if isinstance(x, Mol1):
+        x = fEqMol1(x)
+    return x
+
+def ensureEqAEMol2(x):
+    if isinstance(x, Prim2):
+        x = prim2ToAEMol2(x)
+    elif isinstance(x, Atom2):
+        x = fAENonIdMol2((fEqAtom2(x),))
+    elif isinstance(x, EqAtom2):
+        x = fAENonIdMol2((x,))
+    if isinstance(x, AEMol2):
+        x = fEqAEMol2(x)
+    return x
 
 def fEqAtom2(atom2):
     if atom2 in eqAtom2ByAtom2:

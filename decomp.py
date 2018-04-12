@@ -160,7 +160,7 @@ def blockTensorDecompMol1(mol1, k):
 # Vertical decomposition, dimension 2
 
 # Returns a list of all non-trivial horizontal decompositions of the eqMol1, as a set of tuples.
-def horizontalDecompEqAEMol2(eqAEMol2):
+def verticalDecompEqAEMol2(eqAEMol2):
     decomps = set()
     for aeMol2 in eqAEMol2.aeMol2s:
         for ii in range(1, len(aeMol2)):
@@ -367,7 +367,7 @@ def nonTrivTensorSuffixes(eqAtom2):
     return suffixes
 
 def removeTensorPrefixEqMol1(preEqMol1, eqMol1):
-    if len(preEqMol1) == 0 and preEqMol1.source == fMol(()):
+    if len(preEqMol1) == 0 and preEqMol1.source == fMol0(()):
         return eqMol1
     if preEqMol1 == eqMol1:
         return fEqMol1(fIdMol1(fMol0(())))
@@ -379,7 +379,7 @@ def removeTensorPrefixEqMol1(preEqMol1, eqMol1):
     return None
 
 def removeTensorSuffixEqMol1(sufEqMol1, eqMol1):
-    if len(sufEqMol1) == 0 and sufEqMol1.source == fMol(()):
+    if len(sufEqMol1) == 0 and sufEqMol1.source == fMol0(()):
         return eqMol1
     if sufEqMol1 == eqMol1:
         return fEqMol1(fIdMol1(fMol0(())))
@@ -391,7 +391,7 @@ def removeTensorSuffixEqMol1(sufEqMol1, eqMol1):
     return None
 
 def removeTensorPrefixEqAtom2(preEqMol1, eqAtom2):
-    if len(preEqMol1) == 0 and preEqMol1.source == fMol(()):
+    if len(preEqMol1) == 0 and preEqMol1.source == fMol0(()):
         return eqAtom2
 
     decomps = tensorDecompEqMol1(fEqMol1(next(iter(eqAtom2.atom2s)).collapse))
@@ -401,7 +401,7 @@ def removeTensorPrefixEqAtom2(preEqMol1, eqAtom2):
     return None
 
 def removeTensorSuffixEqAtom2(sufEqMol1, eqAtom2):
-    if len(sufEqMol1) == 0 and sufEqMol1.source == fMol(()):
+    if len(sufEqMol1) == 0 and sufEqMol1.source == fMol0(()):
         return eqAtom2
 
     decomps = tensorDecompEqMol1(fEqMol1(next(iter(eqAtom2.atom2s)).collapse))
