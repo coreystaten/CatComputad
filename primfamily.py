@@ -10,11 +10,13 @@ class ASTMatch(object):
         self.varMatch = {}
         # Dictionary (name, "s" or "t", depth) => cell
         self.stInfo = {}
+        self.functorMatches = {}
 
     def dup(self):
         m = ASTMatch()
         m.varMatch = dict(self.varMatch)
         m.stInfo = dict(self.stInfo)
+        m.functorMatches = dict(self.functorMatches)
         return m
 
 class PrimitiveFamilyNode(ASTNode):
@@ -49,9 +51,9 @@ class PrimitiveFamilyNode(ASTNode):
                     return newMatches
             return []
 
-    def eval(self, assignment):
-        params = [p.eval(assignment) for p in self.paramNodes]
-        prim = self.family.buildPrim(params)
+    def eval(self, assignment, functors=[]):
+        params = [p.eval(assignment, functors) for p in self.paramNodes]
+        prim = self.family.fprim(*params)
         return prim
         #if dim(prim) == 1:
         #    return fEqMol1(prim1ToMol1(prim))
@@ -95,8 +97,8 @@ class Comp0Node(ASTNode):
             newMatches.extend(rightMatches)
         return newMatches
 
-    def eval(self, assignment):
-        return comp0(self.leftNode.eval(assignment), self.rightNode.eval(assignment))
+    def eval(self, assignment, functors):
+        return comp0(self.leftNode.eval(assignment, functors), self.rightNode.eval(assignment, functors))
 
     def alterAST(self, func):
         leftRes = func(self.leftNode)
@@ -138,8 +140,8 @@ class Comp1Node(ASTNode):
             newMatches.extend(rightMatches)
         return newMatches
 
-    def eval(self, assignment):
-        return comp1(self.leftNode.eval(assignment), self.rightNode.eval(assignment))
+    def eval(self, assignment, functors):
+        return comp1(self.leftNode.eval(assignment, functors), self.rightNode.eval(assignment, functors))
 
     def alterAST(self, func):
         leftRes = func(self.leftNode)
@@ -177,8 +179,8 @@ class Comp2Node(ASTNode):
             newMatches.extend(rightMatches)
         return newMatches
 
-    def eval(self, assignment):
-        return comp2(self.leftNode.eval(assignment), self.rightNode.eval(assignment))
+    def eval(self, assignment, functors):
+        return comp2(self.leftNode.eval(assignment, functors), self.rightNode.eval(assignment, functors))
 
     def alterAST(self, func):
         leftRes = func(self.leftNode)
@@ -219,8 +221,8 @@ class IdNode(ASTNode):
             return []
         return []
 
-    def eval(self, assignment):
-        base = self.subNode.eval(assignment)
+    def eval(self, assignment, functors):
+        base = self.subNode.eval(assignment, functors)
         if dim(base) == 0:
             return fIdMol1(base)
         if dim(base) == 1:
@@ -283,7 +285,7 @@ def _isCompatibleSetSourceTarget(name, sOrT, depth, cell, match):
 # Checks if is ok set name=cell in the match.
 def _isCompatibleSetCell(name, cell, match):
     if name in match.varMatch:
-        if cell != match[name]:
+        if cell != match.varMatch[name]:
             return False
     for key in match.stInfo:
         (n, sOrT, depth) = key
@@ -313,7 +315,7 @@ class VarNode(ASTNode):
                 updatedMatches.append(new)
         return updatedMatches
 
-    def eval(self, assignment):
+    def eval(self, assignment, functors):
         return assignment[self.name]
 
     def alterAST(self, func):
@@ -346,8 +348,8 @@ class SourceNode(ASTNode):
                 updatedMatches.append(new)
         return updatedMatches
 
-    def eval(self, assignment):
-        return self.subNode.eval(assignment).source
+    def eval(self, assignment, functors):
+        return self.subNode.eval(assignment, functors).source
 
     def alterAST(self, func):
         res = func(self.subNode)
@@ -382,8 +384,8 @@ class TargetNode(ASTNode):
                 updatedMatches.append(new)
         return updatedMatches
 
-    def eval(self, assignment):
-        return self.subNode.eval(assignment).target
+    def eval(self, assignment, functors):
+        return self.subNode.eval(assignment, functors).target
 
     def alterAST(self, func):
         res = func(self.subNode)
@@ -395,6 +397,57 @@ class TargetNode(ASTNode):
     def __str__(self):
         return "#t(" + str(self.subNode) + ")"
 
+# Here functor should be an integer index starting from 0, indicating which of the functor parameters this is on.
+class FunctorNode(ASTNode):
+    def __init__(self, functor, subNode):
+        self.functor = functor
+        self.subNode = subNode
+        self.size = 1 + subNode.size
+
+    def match(self, target, matchList):
+        if dim(target) == 0:
+            prim = asPrim0(target)
+        elif dim(target) == 1:
+            prim = asPrim1(target)
+        elif dim(target) == 2:
+            prim = asPrim2(target)
+        if isinstance(prim, FunctorPrim0):
+            res = self.subNode.match(prim.mol0, matchList)
+        elif isinstance(prim, FunctorPrim1):
+            res = self.subNode.match(prim.eqMol1, matchList)
+        elif isinstance(prim, FunctorPrim2):
+            res = self.subNode.match(prim.eqAEMol2, matchList)
+        else:
+            return []
+
+        f = prim.functor
+        updatedMatches = []
+        for match in res:
+            if self.functor in res.functorMatches:
+                if res.functorMatches[self.functor] == prim.functor:
+                    updatedMatches.append(res)
+            else:
+                newMatch = res.dup()
+                newMatch.functorMatches[self.functor] = f
+                updatedMatches.append(newMatch)
+        return updatedMatches
+
+    def eval(self, assignment, functors):
+        cell = subNode.eval(assignment, functors)
+        if self.functor in assignment.
+        if dim(cell) == 0:
+            return fFunctorPrim0(self.functor, cell)
+        elif dim(cell) == 1:
+            return fFunctorPrim1(self.functor, cell)
+        elif dim(cell) == 2:
+            return fFunctorPrim2(self.functor, cell)
+
+        def alterAST(self, func):
+            res = func(self.subNode)
+            if res is None:
+                return FunctorNode(self.subNode.alterAST(func))
+            else:
+                return FunctorNode(res)  
 
 class ConstNode(ASTNode):
     def __init__(self, prim):
@@ -442,12 +495,22 @@ def indexDictToList(d):
         l.append(d[ii])
     return l
 
-class FamilyPrim1(Prim1):
-    def __init__(self, family, params):
+class FamilyPrim0(Prim0):
+    def __init__(self, family, params, functors):
         self.family = family
         self.params = params
-        self.source = self.family.sourceAST.eval(listToIndexDict(self.params))
-        self.target = self.family.targetAST.eval(listToIndexDict(self.params))
+        self.functors = functors
+
+    def __str__(self):
+        return self.family.strParams(self.params)
+
+class FamilyPrim1(Prim1):
+    def __init__(self, family, params, functors):
+        self.family = family
+        self.params = params
+        self.functors = functors
+        self.source = family.sourceAST.eval(listToIndexDict(params), functors)
+        self.target = family.targetAST.eval(listToIndexDict(params), functors)
 
     def __str__(self):
         return self.family.strParams(self.params)
@@ -456,8 +519,9 @@ class FamilyPrim2(Prim2):
     def __init__(self, family, params):
         self.family = family
         self.params = params
-        self.source = self.family.sourceAST.eval(listToIndexDict(self.params))
-        self.target = self.family.targetAST.eval(listToIndexDict(self.params))
+        self.functors = functors
+        self.source = family.sourceAST.eval(listToIndexDict(params), functors)
+        self.target = family.targetAST.eval(listToIndexDict(params), functors)
         # Atom2s won't have well-defined source/target if we don't select an instance.
         if isinstance(self.source, EqMol1):
             self.source = next(iter(self.source.mol1s))
@@ -473,18 +537,86 @@ class FamilyPrim2(Prim2):
         return "FamilyPrim2(" + self.family.name + ", " + repr(self.params) + ")"
 
 class FamilyPrim3(Prim3):
-    def __init__(self, family, params):
+    def __init__(self, family, params, functors):
         self.family = family
         self.params = params
-        self.source = self.family.sourceAST.eval(listToIndexDict(self.params))
-        self.target = self.family.targetAST.eval(listToIndexDict(self.params))
-        # Atom3s won't have well-defined source/target if we don't select an instance.
-        raise "Unimplemented"
+        self.functors = functors
+        self.source = self.family.sourceAST.eval(listToIndexDict(self.params), functors)
+        self.target = self.family.targetAST.eval(listToIndexDict(self.params), functors)
 
     def __str__(self):
         return self.family.strParams(self.params)
 
-class PrimitiveFamily(object):
+class AdjIdPrim2(Prim2):
+    # NOTE: Don't build directly, use factory functions below.
+    def __init__(self, left, right):
+        if not(isinstance(self.left, FamilyPrim1) and isinstance(self.right, FamilyPrim1) and self.left.family == self.right.family.adj) or (self.left.params != self.right.params):
+            raise Exception("FamilyPrim1s are not adjoint.")
+
+        self.left = left
+        self.right = right
+        self.source = comp1(left, right)
+        self.target = fIdMol1(left.source)
+        super(AdjIdPrim2, self).__init__()
+
+    def __str__(self):
+        return "adjid(" + str(self.left) + ", " + str(self.right) + ")"
+
+    def __repr__(self):
+        return "AdjIdPrim2(" + repr(self.left) + ", " + repr(self.right) + ")"
+
+# TODO: Mates
+
+class AdjIdPrim3(Prim3):
+    # NOTE: Don't build directly, use factory functions below.
+    def __init__(self, left, right):
+        if not(isinstance(self.left, FamilyPrim2) and isinstance(self.right, FamilyPrim2) and self.left.family == self.right.family.adj) or (self.left.params != self.right.params):
+            raise Exception("FamilyPrim2s are not adjoint.")
+
+        self.left = left
+        self.right = right
+        self.source = comp2(left, right)
+        self.target = fAEIdMol2(left.source)
+        super(AdjIdPrim3, self).__init__()
+
+    def __str__(self):
+        return "adjid(" + str(self.left) + ", " + str(self.right) + ")"
+
+    def __repr__(self):
+        return "AdjIdPrim3(" + repr(self.left) + ", " + repr(self.right) + ")"
+
+# Keys are (params, family1, family2)
+adjIdPrim2Repo = {}
+adjIdPrim3Repo = {}
+
+def fAdjIdPrim2(left, right):
+    if left.params != right.params:
+        raise Exception("Parameters do not match.")
+    if left.family != right.family.adj:
+        raise Exception("Prims are not adjoint.")
+    famPair = (left.params, left.family, right.family)
+    if famPair in adjIdPrim2Repo:
+        return adjIdPrim2Repo[famPair]
+    else:
+        res = AdjIdPrim2(left, right)
+        adjIdPrim2Repo[famPair] = res
+        return res
+
+def fAdjIdPrim3(left, right):
+    if left.params != right.params:
+        raise Exception("Parameters do not match.")
+    if left.family != right.family.adj:
+        raise Exception("Prims are not adjoint.")
+    famPair = (left.params, left.family, right.family)
+    if famPair in adjIdPrim3Repo:
+        return adjIdPrim2Repo[famPair]
+    else:
+        res = AdjIdPrim3(left, right)
+        adjIdPrim3Repo[famPair] = res
+        return res
+
+
+class PrimitiveFamily(IdHashed):
     # Signature is a list of dimensions, one for each parameter slot.  E.g. [1,1,1] takes three arguments, all of dimension 1.
     # AST VarNodes are to be named after the index of each parameter, as an integer.
     def __init__(self, name, dim, signature, sourceAST, targetAST, adj=None):
@@ -503,7 +635,7 @@ class PrimitiveFamily(object):
         self.isDegen = lambda params: False
 
 
-    def buildPrim(self, params):
+    def fprim(self, *params):
         # Need as an ordered list.
         if isinstance(params, dict):
             params = indexDictToList(params)
@@ -528,7 +660,9 @@ class PrimitiveFamily(object):
         if parTup in self.primByParams:
             return self.primByParams[parTup]
         else:
-            if self.dim == 1:
+            if self.dim == 0:
+                prim = FamilyPrim0(self, params)
+            elif self.dim == 1:
                 prim = FamilyPrim1(self, params)
             elif self.dim == 2:
                 prim = FamilyPrim2(self, params)
@@ -682,3 +816,6 @@ def minimalASTFromEqAEMol2(eqAEMol2, paramPrims):
     candidates.extend([Comp1Node(minimalASTFromEqAEMol2(l, paramPrims), minimalASTFromEqAEMol2(r, paramPrims)) for (l,r) in horizontalDecomps])
     candidates.extend([Comp2Node(minimalASTFromEqAEMol2(l, paramPrims), minimalASTFromEqAEMol2(r, paramPrims)) for (l,r) in verticalDecomps])
     return min(candidates, key=lambda x: x.size)
+
+hApp0 = PrimitiveFamily("H", 0, [0], None, None)
+hApp1 = PrimitiveFamily("H", 1, [1], PrimitiveFamilyNode(hApp0, SourceNode(VarNode(0))), PrimitiveFamilyNode(hApp0, TargetNode(VarNode(0))))

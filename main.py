@@ -4,6 +4,7 @@ from ontology import *
 from decomp import *
 
 from shuffle import *
+from syllepsis import *
 from unitor import *
 
 a = prim0ToMol0(ConstPrim0("a"))
@@ -29,12 +30,12 @@ k = prim2ToAEMol2(ConstPrim2("k",y1,y2))
 l = prim2ToAEMol2(ConstPrim2("l",y1,y2))
 
 
-aa1 = fEqMol1(comp0s([x,y,z]))
+aa1 = fEqMol1(comp0s(x,y,z))
 #aa2 = tensorDecompEqMol1(aa1)
 
 
 
-test = comp0s([h,k,l])
+test = comp0s(h,k,l)
 p = test.eqAtom2s
 p0 = p[0]
 p1 = p[1]

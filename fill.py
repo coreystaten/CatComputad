@@ -36,7 +36,7 @@ def tensorSitesEqAEMol2(eqAEMol2):
     return sites(eqAEMol2, fEqAEMol2(fAEIdMol2(fEqMol1(fIdMol1(fMol(()))))), fEqAEMol2(fAEIdMol2(fEqMol1(fIdMol1(fMol(()))))), horizontalDecompEqAEMol2)
 
 
-# TODO: Implement finding paths under functors; cache results, and generate from all path results in cellsAway.
+# TODO: Add adjoint prim matching.
 # keepCond and endCond should be True/False functions on paths.
 # If keepCond is True, a record of the path will be returned.  If endCond is True, that path will no longer be explored.
 def findPaths(start, keepCond, endCond, primFamilies, cellsAwayFunc, collateFunc, memory={}):
@@ -51,6 +51,9 @@ def findPaths(start, keepCond, endCond, primFamilies, cellsAwayFunc, collateFunc
 
     finishedPaths = []
     while paths:
+        #if len(paths) > 100000:
+            #print(list(map(str, paths[-1]["cells"])))
+        #print(len(paths))
 #        if len(paths) == 8:
 #            for p in paths:
 #                print(list(map(str, p["cells"])))
@@ -88,7 +91,7 @@ def cellsAway1(mol0, primFamilies, memory={}):
         sitePrims = []
         for fam in primFamilies:
             matches = fam.sourceAST.match(site[1], [ASTMatch()])
-            matchPrims = [fam.buildPrim(m.varMatch) for m in matches if not(fam.isDegen(m.varMatch))]
+            matchPrims = [fam.fprim(*indexDictToList(m.varMatch)) for m in matches if not(fam.isDegen(m.varMatch))]
             sitePrims.extend(matchPrims)
         q = asPrim0(site[1])
         if q is not None and isinstance(q, FunctorPrim0):
@@ -99,7 +102,7 @@ def cellsAway1(mol0, primFamilies, memory={}):
                 memory["pc"][q.mol0] = cells
             for cell in cells:
                 sitePrims.append(fFunctorPrim1(q.functor, cell))
-        siteCells = [comp0s([site[0], p, site[2]]) for p in sitePrims]
+        siteCells = [comp0s(site[0], p, site[2]) for p in sitePrims]
         cellsAway.extend(siteCells)
     return cellsAway
 
@@ -123,7 +126,7 @@ def cellsAway2(eqMol1, primFamilies, memory={}):
             sitePrims = []
             for fam in primFamilies:
                 matches = fam.sourceAST.match(tSite[1], [ASTMatch()])
-                matchPrims = [fam.buildPrim(m.varMatch) for m in matches if not(fam.isDegen(m.varMatch))]
+                matchPrims = [fam.fprim(*indexDictToList(m.varMatch)) for m in matches if not(fam.isDegen(m.varMatch))]
                 sitePrims.extend(matchPrims)
             q = asPrim1(tSite[1])
             if q is not None and isinstance(q, FunctorPrim1):
@@ -134,7 +137,7 @@ def cellsAway2(eqMol1, primFamilies, memory={}):
                     memory["pc"][q.eqMol1] = cells
                 for cell in cells:
                     sitePrims.append(fFunctorPrim2(q.functor, cell))
-            siteCells = [comp1s([hSite[0], comp0s([tSite[0], p, tSite[2]]), hSite[2]]) for p in sitePrims]
+            siteCells = [comp1s(hSite[0], comp0s(tSite[0], p, tSite[2]), hSite[2]) for p in sitePrims]
             cellsAway.extend(siteCells)
     return cellsAway
 
@@ -158,7 +161,7 @@ def cellsAway3(eqAEMol2, primFamilies, memory={}):
                 sitePrims = []
                 for fam in primFamilies:
                     matches = fam.sourceAST.match(tSite[1], [ASTMatch()])
-                    matchPrims = [fam.buildPrim(m.varMatch) for m in matches if not(fam.isDegen(m.varMatch))]
+                    matchPrims = [fam.fprim(*indexDicttoList(m.varMatch)) for m in matches if not(fam.isDegen(m.varMatch))]
                     sitePrims.extend(matchPrims)
                 q = asPrim2(tSite[1])
                 if q is not None and isinstance(q, FunctorPrim2):
@@ -196,7 +199,7 @@ def buildPathGraph1DEFUNCT(start, primFamilies):
                 matches = fam.sourceAST.match(site[1], [ASTMatch()])
                 matchPrims = [fam.buildPrim(m) for m in matches]
                 sitePrims.extend(matchPrims)
-            siteCells = [comp0s([site[0], p, site[2]]) for p in sitePrims]
+            siteCells = [comp0s(site[0], p, site[2]) for p in sitePrims]
             cells.extend(siteCells)
         graph[nextStart] = cells
         toExplore = set([c.target for c in cells]).difference(known)
@@ -262,8 +265,9 @@ def searchForPathPairs2(paths, primFamilies):
             if ii == jj:
                 continue
             pathsFound = findPaths2(paths[jj], paths[ii], primFamilies)
-            if len(pathsFound) > 0:
-                print("(%d,%d) -- %s -- %s" % (jj, ii, str(paths[jj]), str(paths[ii])))
+            print("(%d, %d)" % (jj, ii))
+            if len(pathsFound) >= 2:
+                print("%s -- %s" % (str(paths[jj]), str(paths[ii])))
                 print("%d paths found." % (len(pathsFound),))
                 for path in pathsFound:
                     print("\t" + str(path))

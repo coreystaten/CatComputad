@@ -332,12 +332,12 @@ def areLeftTensorTransposable(eqA1, eqA2):
 
     # TODO: Copied from left tensor transpose, factor out of both.
     for rightMol in a1rEq.mol1s:
-        xLeft1 = removeSuffixMol1(comp1(comp0s([a2l.a0, a2l.p2.source, a2l.b0]), a2l.r1), rightMol)
+        xLeft1 = removeSuffixMol1(comp1(comp0s(a2l.a0, a2l.p2.source, a2l.b0), a2l.r1), rightMol)
         if xLeft1 is not None:
             for leftMol in a2lEq.mol1s:
-                xLeft2 = removePrefixMol1(comp1(a1r.l1, comp0s([a1r.a0, a1r.p2.target, a1r.b0])), leftMol)
+                xLeft2 = removePrefixMol1(comp1(a1r.l1, comp0s(a1r.a0, a1r.p2.target, a1r.b0)), leftMol)
                 if xLeft1 == xLeft2:
-                    sharedCollapse = comp1s([a1r.l1, comp0s([a1r.a0, a1r.p2.collapse, a1r.b0]), xLeft1, comp0s([a2l.a0, a2l.p2.collapse, a2l.b0]), a2l.r1])
+                    sharedCollapse = comp1s(a1r.l1, comp0s(a1r.a0, a1r.p2.collapse, a1r.b0), xLeft1, comp0s(a2l.a0, a2l.p2.collapse, a2l.b0), a2l.r1)
                     tensorDecomps = tensorDecompEqMol1(fEqMol1(sharedCollapse))
                     validDecomps = []
                     for (left, right) in tensorDecomps:

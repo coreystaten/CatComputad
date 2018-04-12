@@ -69,8 +69,8 @@ class Atom1(IdHashed):
         self.a0 = a0
         self.b0 = b0
         self.p1 = p1
-        self.source = comp0s([self.a0, self.p1.source, self.b0])
-        self.target = comp0s([self.a0, self.p1.target, self.b0])
+        self.source = comp0s(self.a0, self.p1.source, self.b0)
+        self.target = comp0s(self.a0, self.p1.target, self.b0)
 
     def __str__(self):
         part0s = []
@@ -173,11 +173,11 @@ class Atom2(IdHashed):
         self.p2 = p2
         self.b0 = b0
         self.r1 = r1
-        self.source = comp1s([self.l1, comp0s([self.a0, self.p2.source, self.b0]), self.r1])
+        self.source = comp1s(self.l1, comp0s(self.a0, self.p2.source, self.b0), self.r1)
         if not(isinstance(self.source, Mol1)):
             raise Exception("Invalid source")
-        self.target = comp1s([self.l1, comp0s([self.a0, self.p2.target, self.b0]), self.r1])
-        self.collapse = comp1s([self.l1, comp0s([self.a0, self.p2.collapse, self.b0]), self.r1])
+        self.target = comp1s(self.l1, comp0s(self.a0, self.p2.target, self.b0), self.r1)
+        self.collapse = comp1s(self.l1, comp0s(self.a0, self.p2.collapse, self.b0), self.r1)
 
     def __str__(self):
         part1s = []
@@ -304,8 +304,8 @@ class StepCell3(IdHashed):
         self.b = b
         self.r = r
         self.bot = bot
-        self.source = comp2s([top, comp1s([l, comp0s([a, p3.source, b]), r]), bot])
-        self.target = comp2s([top, comp1s([l, comp0s([a, p3.target, b]), r]), bot])
+        self.source = comp2s(top, comp1s(l, comp0s(a, p3.source, b), r), bot)
+        self.target = comp2s(top, comp1s(l, comp0s(a, p3.target, b), r), bot)
 
     def __str__(self):
         _top = asLowestDim(top)
@@ -755,7 +755,7 @@ def comp0(x,y):
 #    else:
 #        raise Exception("Invalid 0-composition between %s and %s" % (str(type(x)), str(type(y))))
 
-def comp0s(xs):
+def comp0s(*xs):
     result = xs[0]
     for x in xs[1:]:
         result = comp0(result,x)
@@ -877,7 +877,7 @@ def comp1(x,y):
     raise Exception("Undetermined comp1 of types %s and %s" % (str(typeX), str(typeY)))
 
 
-def comp1s(xs):
+def comp1s(*xs):
     result = xs[0]
     for x in xs[1:]:
         result = comp1(result,x)
@@ -928,7 +928,7 @@ def comp2(x,y):
     raise Exception("Undetermined comp2 of types %s and %s" % (str(type(x)), str(type(y))))
 
 
-def comp2s(xs):
+def comp2s(*xs):
     result = xs[0]
     for x in xs[1:]:
         result = comp2(result,x)
@@ -1003,16 +1003,16 @@ def transposeAtom1s(a1,a2):
     xLeft2 = removePrefixMol0(comp0(a1.a0, a1.p1.target), a2.a0)
 
     if xLeft1 is not None and xLeft1 == xLeft2:
-        a2New = fAtom1(comp0s([a1.a0, a1.p1.source, xLeft1]), a2.p1, a2.b0)
-        a1New = fAtom1(a1.a0, a1.p1, comp0s([xLeft1, a2.p1.target, a2.b0]))
+        a2New = fAtom1(comp0s(a1.a0, a1.p1.source, xLeft1), a2.p1, a2.b0)
+        a1New = fAtom1(a1.a0, a1.p1, comp0s(xLeft1, a2.p1.target, a2.b0))
         return (a2New, a1New, TransposeType.LEFT)
 
     xRight1 = removePrefixMol0(comp0(a2.a0, a2.p1.source), a1.a0)
     xRight2 = removeSuffixMol0(comp0(a1.p1.target, a1.b0), a2.b0)
 
     if xRight1 is not None and xRight1 == xRight2:
-        a2New = fAtom1(a2.a0, a2.p1, comp0s([xRight1, a1.p1.source, a1.b0]))
-        a1New = fAtom1(comp0s([a2.a0, a2.p1.target, xRight1]), a1.p1, a1.b0)
+        a2New = fAtom1(a2.a0, a2.p1, comp0s(xRight1, a1.p1.source, a1.b0))
+        a1New = fAtom1(comp0s(a2.a0, a2.p1.target, xRight1), a1.p1, a1.b0)
         return (a2New, a1New, TransposeType.RIGHT)
 
     return (None, None, TransposeType.NONE)
@@ -1195,13 +1195,13 @@ def leftTransposeEqAtom2s(a1,a2):
 
     # TODO: Move composition outside loops to speed up
     for rightMol in a1rEq.mol1s:
-        xLeft1 = removeSuffixMol1(comp1(comp0s([a2l.a0, a2l.p2.source, a2l.b0]), a2l.r1), rightMol)
+        xLeft1 = removeSuffixMol1(comp1(comp0s(a2l.a0, a2l.p2.source, a2l.b0), a2l.r1), rightMol)
         if xLeft1 is not None:
             for leftMol in a2lEq.mol1s:
-                xLeft2 = removePrefixMol1(comp1(a1r.l1, comp0s([a1r.a0, a1r.p2.target, a1r.b0])), leftMol)
+                xLeft2 = removePrefixMol1(comp1(a1r.l1, comp0s(a1r.a0, a1r.p2.target, a1r.b0)), leftMol)
                 if xLeft1 == xLeft2:
-                    a2New = fEqAtom2(fAtom2(comp1s([a1r.l1, comp0s([a1r.a0, a1r.p2.source, a1r.b0]), xLeft1]), a2l.a0, a2l.p2, a2l.b0, a2l.r1))
-                    a1New = fEqAtom2(fAtom2(a1r.l1, a1r.a0, a1r.p2, a1r.b0, comp1s([xLeft1, comp0s([a2l.a0, a2l.p2.target, a2l.b0]), a2l.r1])))
+                    a2New = fEqAtom2(fAtom2(comp1s(a1r.l1, comp0s(a1r.a0, a1r.p2.source, a1r.b0), xLeft1), a2l.a0, a2l.p2, a2l.b0, a2l.r1))
+                    a1New = fEqAtom2(fAtom2(a1r.l1, a1r.a0, a1r.p2, a1r.b0, comp1s(xLeft1, comp0s(a2l.a0, a2l.p2.target, a2l.b0), a2l.r1)))
                     return (a2New, a1New)
     return (None, None)
 
@@ -1215,13 +1215,13 @@ def rightTransposeEqAtom2s(a1,a2):
 
     # TODO: Move composition outside loops to speed up
     for leftMol in a1lEq.mol1s:
-        xRight1 = removePrefixMol1(comp1(a2r.l1, comp0s([a2r.a0, a2r.p2.source, a2r.b0])), leftMol)
+        xRight1 = removePrefixMol1(comp1(a2r.l1, comp0s(a2r.a0, a2r.p2.source, a2r.b0)), leftMol)
         if xRight1 is not None:
             for rightMol in a2rEq.mol1s:
-                xRight2 = removeSuffixMol1(comp1(comp0s([a1l.a0, a1l.p2.target, a1l.b0]), a1l.r1), rightMol)
+                xRight2 = removeSuffixMol1(comp1(comp0s(a1l.a0, a1l.p2.target, a1l.b0), a1l.r1), rightMol)
                 if xRight1 == xRight2:
-                    a2New = fEqAtom2(fAtom2(a2r.l1, a2r.a0, a2r.p2, a2r.b0, comp1s([xRight1, comp0s([a1l.a0, a1l.p2.source, a1l.b0]), a1l.r1])))
-                    a1New = fEqAtom2(fAtom2(comp1s([a2r.l1, comp0s([a2r.a0, a2r.p2.target, a2r.b0]), xRight1]), a1l.a0, a1l.p2, a1l.b0, a1l.r1))
+                    a2New = fEqAtom2(fAtom2(a2r.l1, a2r.a0, a2r.p2, a2r.b0, comp1s(xRight1, comp0s(a1l.a0, a1l.p2.source, a1l.b0), a1l.r1)))
+                    a1New = fEqAtom2(fAtom2(comp1s(a2r.l1, comp0s(a2r.a0, a2r.p2.target, a2r.b0), xRight1), a1l.a0, a1l.p2, a1l.b0, a1l.r1))
                     return (a2New, a1New)
     return (None, None)
 
