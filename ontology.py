@@ -1308,4 +1308,7 @@ def primSetEqMol1(eqMol1):
         pset = set()
         for atom in inst.atom1s:
             pset.add(atom.p1)
-        return pset
+        return
+
+def lMap(f, xs):
+    list(map(f, xs))

@@ -442,12 +442,15 @@ class FunctorNode(ASTNode):
         elif dim(cell) == 2:
             return fFunctorPrim2(self.functor, cell)
 
-        def alterAST(self, func):
-            res = func(self.subNode)
-            if res is None:
-                return FunctorNode(self.subNode.alterAST(func))
-            else:
-                return FunctorNode(res)  
+    def alterAST(self, func):
+        res = func(self.subNode)
+        if res is None:
+            return FunctorNode(self.subNode.alterAST(func))
+        else:
+            return FunctorNode(res)
+
+    def __str__(self):
+        return str(
 
 class ConstNode(ASTNode):
     def __init__(self, prim):
