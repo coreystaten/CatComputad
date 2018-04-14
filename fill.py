@@ -91,7 +91,7 @@ def cellsAway1(mol0, primFamilies, memory={}):
         sitePrims = []
         for fam in primFamilies:
             matches = fam.sourceAST.match(site[1], [ASTMatch()])
-            matchPrims = [fam.fprim(*indexDictToList(m.varMatch)) for m in matches if not(fam.isDegen(m.varMatch))]
+            matchPrims = [fam.fprim(*indexDictToList(m.varMatch), ) for m in matches if not(fam.isDegen(m.varMatch))]
             sitePrims.extend(matchPrims)
         q = asPrim0(site[1])
         if q is not None and isinstance(q, FunctorPrim0):

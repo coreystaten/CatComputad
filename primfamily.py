@@ -469,7 +469,7 @@ class ConstNode(ASTNode):
             return matchList
         return []
 
-    def eval(self, assignment):
+    def eval(self, assignment, functors):
         return self.matchTarget
 
     def alterAST(self, func):
@@ -505,7 +505,7 @@ class FamilyPrim0(Prim0):
         self.functors = functors
 
     def __str__(self):
-        return self.family.strParams(self.params)
+        return self.family.strParams(self.params, self.functors)
 
 class FamilyPrim1(Prim1):
     def __init__(self, family, params, functors):
@@ -516,7 +516,7 @@ class FamilyPrim1(Prim1):
         self.target = family.targetAST.eval(listToIndexDict(params), functors)
 
     def __str__(self):
-        return self.family.strParams(self.params)
+        return self.family.strParams(self.params, self.functors)
 
 class FamilyPrim2(Prim2):
     def __init__(self, family, params):
@@ -534,7 +534,7 @@ class FamilyPrim2(Prim2):
 
 
     def __str__(self):
-        return self.family.strParams(self.params)
+        return self.family.strParams(self.params, self.functors)
 
     def __repr__(self):
         return "FamilyPrim2(" + self.family.name + ", " + repr(self.params) + ")"
@@ -639,6 +639,9 @@ class PrimitiveFamily(IdHashed):
 
 
     def fprim(self, *params):
+        return self.buildPrim(params)
+
+    def buildPrim(self, params, functors):
         # Need as an ordered list.
         if isinstance(params, dict):
             params = indexDictToList(params)
