@@ -1,10 +1,11 @@
 from ontology import *
 from decomp import *
 from primfamily import *
-
+import time
 # Returns True if the generated prim (found from a source) is acceptable, False if not.
 # Used to eliminate degenerate or expanding primitives.
 
+# TODO: Include middle-identity sites?  I.e. (idSource, idSource, x) and (x, idTarget, idTarget).  Is this necessary for any patterns?
 # Returns a list of 3-tuples, which are 3-fold tensor decompositions of mol0.  Includes trivial decompositions.
 def sites(x, idSource, idTarget, decomp):
     decomps = [(idSource, x, idTarget)]
@@ -27,13 +28,13 @@ def tensorSitesEqMol1(eqMol1):
     return sites(eqMol1, fEqMol1(fIdMol1(fMol0(()))), fEqMol1(fIdMol1(fMol0(()))), tensorDecompEqMol1)
 
 def verticalSitesEqAEMol2(eqAEMol2):
-    return sites(eqAEMol2, fEqAEMol2(fAEIdMol2(x.source)), fEqAEMol2(fAEIdMol2(x.target)), verticalDecompEqAEMol2)
+    return sites(eqAEMol2, fEqAEMol2(fAEIdMol2(eqAEMol2.source)), fEqAEMol2(fAEIdMol2(eqAEMol2.target)), verticalDecompEqAEMol2)
 
 def horizontalSitesEqAEMol2(eqAEMol2):
-    return sites(eqAEMol2, fEqAEMol2(fAEIdMol2(fEqMol1(fIdMol1(x.source.source)))), fEqAEMol2(fAEIdMol2(fEqMol1(fIdMol1(x.target.target)))), horizontalDecompEqAEMol2)
+    return sites(eqAEMol2, fEqAEMol2(fAEIdMol2(fEqMol1(fIdMol1(eqAEMol2.source.source)))), fEqAEMol2(fAEIdMol2(fEqMol1(fIdMol1(eqAEMol2.target.target)))), horizontalDecompEqAEMol2)
 
 def tensorSitesEqAEMol2(eqAEMol2):
-    return sites(eqAEMol2, fEqAEMol2(fAEIdMol2(fEqMol1(fIdMol1(fMol(()))))), fEqAEMol2(fAEIdMol2(fEqMol1(fIdMol1(fMol(()))))), horizontalDecompEqAEMol2)
+    return sites(eqAEMol2, fEqAEMol2(fAEIdMol2(fEqMol1(fIdMol1(fMol0(()))))), fEqAEMol2(fAEIdMol2(fEqMol1(fIdMol1(fMol0(()))))), tensorDecompEqAEMol2)
 
 
 # TODO: Add adjoint prim matching.
@@ -51,35 +52,61 @@ def findPaths(start, keepCond, endCond, primFamilies, cellsAwayFunc, collateFunc
 
     finishedPaths = []
     while paths:
-        #if len(paths) > 100000:
-            #print(list(map(str, paths[-1]["cells"])))
-        #print(len(paths))
+        (newFinished, newPaths) = _stepPaths(paths, cellGraph, keepCond, endCond, primFamilies, cellsAwayFunc, memory)
+        finishedPaths.extend(newFinished)
+        paths = newPaths
+    return list(set([collateFunc(tuple(p["cells"])) for p in finishedPaths]))
+
+def _stepPaths(paths, cellGraph, keepCond, endCond, primFamilies, cellsAwayFunc, memory):
+    #if len(paths) > 10000:
+    #    print(list(map(str, paths[-1]["cells"])))
+    print("(_stepPaths: %d)" % (len(paths),))
 #        if len(paths) == 8:
 #            for p in paths:
 #                print(list(map(str, p["cells"])))
-        #if len(paths[0]["cells"]) > 10:
-            #print(str(paths[0]["cells"][2]))
-        newPaths = []
-        for path in paths:
-            if path["current"] in cellGraph:
-                cellsAway = cellGraph[path["current"]]
-            else:
-                cellsAway = cellsAwayFunc(path["current"], primFamilies, memory)
-                cellGraph[path["current"]] = cellsAway
-            for cell in cellsAway:
-                if cell.target in path["seen"]:
-                    continue
-                p = dict(path)
-                p["cells"] = p["cells"] + (cell,)
-                p["seen"] = p["seen"].union(frozenset([cell.target]))
-                p["current"] = cell.target
-                if keepCond(p):
-                    finishedPaths.append(p)
-                if not(endCond(p)):
-                    newPaths.append(p)
-        paths = newPaths
-    #return finishedPaths
-    return list(set([collateFunc(tuple(p["cells"])) for p in finishedPaths]))
+    #if len(paths[0]["cells"]) > 10:
+        #print(str(paths[0]["cells"][2]))
+    finishedPaths = []
+    newPaths = []
+    for path in paths:
+        if path["current"] in cellGraph:
+            cellsAway = cellGraph[path["current"]]
+        else:
+            cellsAway = cellsAwayFunc(path["current"], primFamilies, memory)
+            cellGraph[path["current"]] = cellsAway
+        (finished, new) = _stepPath(path, cellsAway, keepCond, endCond, primFamilies, cellsAwayFunc, memory)
+        finishedPaths.extend(finished)
+        newPaths.extend(new)
+    return (finishedPaths, newPaths)
+
+def _stepPath(path, cellsAway, keepCond, endCond, primFamilies, cellsAwayFunc, memory):
+    finishedPaths = []
+    newPaths = []
+
+    for cell in cellsAway:
+        if cell.target in path["seen"]:
+            continue
+        q = _checkSupp(path,cell)
+        p = _buildNewPath(path, cell)
+
+        if keepCond(p):
+            finishedPaths.append(p)
+        if not(endCond(p)):
+            newPaths.append(p)
+    return (finishedPaths, newPaths)
+
+def _checkSupp(path, cell):
+    p = dict(path)
+    p["cells"] = p["cells"] + (cell,)
+    p["seen"] = p["seen"].union(frozenset([cell.target]))
+    return p
+
+def _buildNewPath(path, cell):
+    p = dict(path)
+    p["cells"] = p["cells"] + (cell,)
+    p["seen"] = p["seen"].union(frozenset([cell.target]))
+    p["current"] = cell.target
+    return p
 
 def cellsAway1(mol0, primFamilies, memory={}):
     # Path-cache is used to keep track of path graphs generated while looking under FunctorPrims
@@ -91,7 +118,7 @@ def cellsAway1(mol0, primFamilies, memory={}):
         sitePrims = []
         for fam in primFamilies:
             matches = fam.sourceAST.match(site[1], [ASTMatch()])
-            matchPrims = [fam.fprim(*indexDictToList(m.varMatch), ) for m in matches if not(fam.isDegen(m.varMatch))]
+            matchPrims = [fam.buildPrim(indexDictToList(m.varMatch), m.functorMatches) for m in matches if not(fam.isDegen(m.varMatch))]
             sitePrims.extend(matchPrims)
         q = asPrim0(site[1])
         if q is not None and isinstance(q, FunctorPrim0):
@@ -126,7 +153,7 @@ def cellsAway2(eqMol1, primFamilies, memory={}):
             sitePrims = []
             for fam in primFamilies:
                 matches = fam.sourceAST.match(tSite[1], [ASTMatch()])
-                matchPrims = [fam.fprim(*indexDictToList(m.varMatch)) for m in matches if not(fam.isDegen(m.varMatch))]
+                matchPrims = [fam.buildPrim(indexDictToList(m.varMatch), m.functorMatches) for m in matches if not(fam.isDegen(m.varMatch))]
                 sitePrims.extend(matchPrims)
             q = asPrim1(tSite[1])
             if q is not None and isinstance(q, FunctorPrim1):
@@ -161,7 +188,7 @@ def cellsAway3(eqAEMol2, primFamilies, memory={}):
                 sitePrims = []
                 for fam in primFamilies:
                     matches = fam.sourceAST.match(tSite[1], [ASTMatch()])
-                    matchPrims = [fam.fprim(*indexDicttoList(m.varMatch)) for m in matches if not(fam.isDegen(m.varMatch))]
+                    matchPrims = [fam.buildPrim(indexDictToList(m.varMatch), m.functorMatches) for m in matches if not(fam.isDegen(m.varMatch))]
                     sitePrims.extend(matchPrims)
                 q = asPrim2(tSite[1])
                 if q is not None and isinstance(q, FunctorPrim2):
@@ -256,7 +283,6 @@ def searchForPathPairs2AdjFam(paths, adjFamilies, primFamilies):
         print("Search using %s" % (str(list(map(str, c))),))
         searchForPathPairs2(paths, c + primFamilies)
 
-# TODO: Split primFamilies into two variables, check all combinations of adjs in one.
 # Takes a list of 1-cell paths.  Pairwise tries to find paths between them using given primitive families.  Prints results.
 def searchForPathPairs2(paths, primFamilies):
     kk = len(paths)
@@ -264,6 +290,7 @@ def searchForPathPairs2(paths, primFamilies):
         for jj in range(kk):
             if ii == jj:
                 continue
+            #pathsFound = findPaths(paths[jj], targetEndCond(paths[ii]), lambda x: len(x["cells"]) > 4, primFamilies, cellsAway2, collate2)
             pathsFound = findPaths2(paths[jj], paths[ii], primFamilies)
             print("(%d, %d)" % (jj, ii))
             if len(pathsFound) >= 2:
@@ -271,3 +298,205 @@ def searchForPathPairs2(paths, primFamilies):
                 print("%d paths found." % (len(pathsFound),))
                 for path in pathsFound:
                     print("\t" + str(path))
+
+def searchForPathPairs3AdjFam(group1, group2, adjFamilies, primFamilies):
+    l = [[f, f.adj] for f in adjFamilies]
+    choices = probConcat(l)
+    for c in choices:
+        print("Search using %s" % (str(list(map(str, c))),))
+        searchForPathPairs3(group1, group2,  c + primFamilies)
+
+def searchForPathPairs3(group1, group2, primFamilies):
+    for ii in range(len(group1)):
+        for jj in range(len(group2)):
+            if group1[ii] == group2[jj]:
+                continue
+            #pathsFound = findPaths(paths[jj], targetEndCond(paths[ii]), lambda x: len(x["cells"]) > 4, primFamilies, cellsAway2, collate2)
+            pathsFound = findPaths3(group1[ii], group2[jj], primFamilies)
+            print("(%d, %d)" % (ii, jj))
+            if len(pathsFound) >= 2:
+                print("%s -- %s" % (str(group1[ii]), str(group2[jj])))
+                print("%d paths found." % (len(pathsFound),))
+                diffPrimSets = set(map(lambda x: frozenset(primSetCompCell3(x)), pathsFound))
+                if len(diffPrimSets) > 1:
+                    for path in pathsFound:
+                        print("\t" + str(path))
+                else:
+                    print("Not distinct.  Primset: %s" % (str(lmap(str,(list(diffPrimSets)[0])))))
+
+def searchForPathPairs3AdjFam(group1, group2, adjFamilies, primFamilies):
+    l = [[f, f.adj] for f in adjFamilies]
+    choices = probConcat(l)
+    for c in choices:
+        print("Search using %s" % (str(list(map(str, c))),))
+        searchForPathPairs3(group1, group2,  c + primFamilies)
+
+def exploreFromToAdjCells3(baseCells, seeking, adjFamilies, primFamilies, countFamilies):
+    for b in baseCells:
+        print("-----------------------------------")
+        print("START CELL: " + str(b))
+        print("-----------------------------------")
+        seeking2 = set(seeking)
+        if b in seeking2:
+            seeking2.remove(b)
+        exploreFromToAdj3(b, seeking2, adjFamilies, primFamilies, countFamilies)
+
+def exploreFromToAdj3(base, seeking, adjFamilies, primFamilies, countFamilies):
+    l = [[f, f.adj] for f in adjFamilies]
+    choices = probConcat(l)
+    for c in choices:
+        print("Explore using %s" % (str(list(map(str, c))),))
+        exploreFromTo3(base, seeking,  c + primFamilies, countFamilies)
+
+def exploreFromTo3(base, seeking, primFamilies, countFamilies):
+    paths = findPaths(base, lambda x: ensureEqAEMol2(x["cells"][-1].target) in seeking, lambda x: False, primFamilies, cellsAway3, collate3, memory={})
+    print("%d paths found." % len(paths))
+    primSetsByTarget = {}
+    for p in paths:
+        key = ensureEqAEMol2(p.target)
+        if key not in primSetsByTarget:
+            primSetsByTarget[key] = set()
+        pset = primSetCompCell3(p)
+        primSetsByTarget[key].add(frozenset(filter(lambda x: x.family in countFamilies, pset)))
+    for (t,p) in primSetsByTarget.items():
+        if len(p) > 1:
+            for p1 in paths:
+                for p2 in paths:
+                    if ensureEqAEMol2(p1.source) == ensureEqAEMol2(p2.source) and ensureEqAEMol2(p1.target) == ensureEqAEMol2(p2.target) and primSetCompCell3(p1) != primSetCompCell3(p2):
+                        print("Dual paths detected:")
+                        print("FROM:")
+                        print(p1.source)
+                        print("--")
+                        print(p1.target)
+                        print("PRIMSET 1 IS:")
+                        print(lmap(str, primSetCompCell3(p1)))
+                        print("PRIMSET 2 IS:")
+                        print(lmap(str, primSetCompCell3(p2)))
+                        print("PATH 1 IS:")
+                        print(str(p1))
+                        print("PATH 2 IS:")
+                        print(str(p2))
+
+            break
+
+
+
+# Alternative algorithm for finding path pairs:
+#   Do a simultaneous meet in the middle search for each path:
+#     Take paths of length $n$ away from each path, separately using the families and their adjoints.
+#     Check if there is any codomain overlap between any adjoint paths and non-adjoint paths; if so, we can turn this into a desired path.
+def meetInMiddleSearchForPathPairs3(paths, primFamilies):
+    print(list(map(len, paths)))
+    adjFamilies = [p.adj for p in primFamilies]
+    baseTime = time.time()
+    print("Starting with %d 1-paths" % (len(paths),))
+    soFar = {}
+    work = 0
+    for p in paths:
+        awayNorm = list(map(lambda x: [x], cellsAway3(p, primFamilies)))
+        awayAdj = list(map(lambda x: [x], cellsAway3(p, adjFamilies)))
+        soFar[p] = (awayNorm, awayAdj)
+        work = work + 1
+        if work % 100 == 0:
+            print(str(work) + ": " + str(int(time.time() - baseTime)) + " seconds")
+    length = 2
+    alternate = 0
+    while True:
+        print("Current length: %d" % (length,))
+        print("Current # paths: " + str((sum(map(len, [p[0] for p in soFar.values()])), sum(map(len, [p[0] for p in soFar.values()])))))
+        normCods = set()
+        for x in soFar.values():
+            for y in x[0]:
+                normCods.add(ensureEqAEMol2(y[-1].target))
+        adjCods = set()
+        for x in soFar.values():
+            for y in x[0]:
+                adjCods.add(ensureEqAEMol2(y[-1].target))
+
+        intersection = normCods.intersection(adjCods)
+        if len(intersection) > 0:
+            normByCod = {}
+            adjByCod = {}
+            normMatches = [p for p in x[0] if (ensureEqAEMol2(p[-1].target) in intersection) for x in soFar.values() ]
+            adjMatches = [p for p in x[1] if (ensureEqAEMol2(p[-1].target) in intersection) for x in soFar.values() ]
+
+            for ii in intersection:
+                normByCod[ii] = []
+                adjByCod[ii] = []
+                for p in normMatches:
+                    if ensureEqAEMol2(p[-1].target) == ii:
+                        normByCod[ii].append(p)
+                for p in adjMatches:
+                    if ensureEqAEMol2(p[-1].target) == ii:
+                        adjByCod[ii].append(p)
+            print("Matches found at length %d:" % (length,))
+            for ii in intersection:
+                print("----------------------")
+                for p in normByCod[ii]:
+                    print("### " + str(lmap(str, p)))
+                print("Can pair with")
+                for p in adjByCod[ii]:
+                    print("### " + str(lmap(str, p)))
+        if alternate == 0:
+            for p in paths:
+                curPaths = soFar[p][0]
+                newPaths = []
+                for cur in curPaths:
+                    away = cellsAway3(ensureEqAEMol2(cur[-1].target), primFamilies)
+                    newPaths.extend([cur + [a] for a in away])
+                    work = work + 1
+                    if work % 100 == 0:
+                        print(str(work) + ": " + str(int(time.time() - baseTime)) + " seconds")
+                soFar[p] = (newPaths, soFar[p][1])
+            alternate = 1
+        elif alternate == 1:
+            for p in paths:
+                curPaths = soFar[p][1]
+                newPaths = []
+                for cur in curPaths:
+                    away = cellsAway3(ensureEqAEMol2(cur[-1].target), adjFamilies)
+                    newPaths.extend([cur + [a] for a in away])
+                    work = work + 1
+                    if work % 100 == 0:
+                        print(str(work) + ": " + str(int(time.time() - baseTime)) + " seconds")
+                soFar[p] = (soFar[p][0], newPaths)
+            alternate = 0
+        length += 1
+
+            # Figure out which things can join.
+
+
+def primCount(cc3):
+    count = {}
+    for stepCell in cc3.stepCell3s:
+        tup1 = (str(stepCell.p.family), tuple(stepCell.p.params))
+        tup2 = (str(stepCell.p.family.adj), tuple(stepCell.p.params))
+        if tup1 in count:
+            count[tup1] += 1
+        elif tup2 in count:
+            count[tup2] -= 1
+            if count[tup2] == 0:
+                del count[tup2]
+        else:
+            count[tup1] = 1
+    return frozenset([(k,v) for (k,v) in count.items()])
+
+
+def circleAround3(startPath, primFamilies):
+    paths = findPaths(startPath, lambda x: True, lambda x: len(x["cells"]) > 6, primFamilies, cellsAway3, collate3)
+    pathsByCod = {}
+    for p in paths:
+        if p.target not in pathsByCod:
+            pathsByCod[p.target] = []
+        pathsByCod[p.target].append(p)
+    for target in pathsByCod.keys():
+        pcSets = set(map(primCount, pathsByCod[target]))
+        if len(pcSets) > 1:
+            ps = pathsByCod[target]
+            ps.sort(key=len)
+            ps.reverse()
+            for p1 in ps:
+                for p2 in ps:
+                    if primCount(p1) != primCount(p2):
+                        return (p1, p2)
+            print(lmap(str, pcSets))

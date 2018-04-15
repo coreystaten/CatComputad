@@ -1,6 +1,7 @@
 from ontology import *
 
 # Gives a set of non-trivial decompositions of mol0 via tensor, as pairs (m1, m2)
+@memoize1
 def tensorDecompMol0(mol0):
     decomps = set()
     # If len(mol0) <= 1, this does nothing.
@@ -8,18 +9,19 @@ def tensorDecompMol0(mol0):
         left = fMol0(mol0.prim0s[:ii])
         right = fMol0(mol0.prim0s[ii:])
         decomps.add((left, right))
-    return decomps
+    return frozenset(decomps)
 
 ###########################################################
 # Horizontal decomposition, dimension 1
 
 # Returns a list of all non-trivial horizontal decompositions of the eqMol1, as a set of tuples.
+@memoize1
 def horizontalDecompEqMol1(eqMol1):
     decomps = set()
     for mol1 in eqMol1.mol1s:
         for ii in range(1, len(mol1)):
             decomps.add((fEqMol1(takeMol1(mol1, ii)), fEqMol1(dropMol1(mol1, ii))))
-    return decomps
+    return frozenset(decomps)
 
 
 ###########################################################
@@ -39,6 +41,7 @@ def nonTrivSuffixes(t):
     return suffixes
 
 # Gives a set of non-trivial decompositions of eqMol1 via tensor, as pairs (m1, m2).
+@memoize1
 def tensorDecompEqMol1(eqMol1):
     decomps = set()
     if len(eqMol1) == 0:
@@ -57,7 +60,7 @@ def tensorDecompEqMol1(eqMol1):
 
         # Block decomps
         decomps = decomps.union(map(lambda x: (fEqMol1(x[0]), fEqMol1(x[1])),blockTensorDecompEqMol1(eqMol1)))
-    return decomps
+    return frozenset(decomps)
 
 # Gives a set of non-trivial decompositions of a NonIdMol1 via tensor, where the first of the pair is an identity 1-molecule
 def idPrefixDecompMol1(mol1):
@@ -160,12 +163,13 @@ def blockTensorDecompMol1(mol1, k):
 # Vertical decomposition, dimension 2
 
 # Returns a list of all non-trivial horizontal decompositions of the eqMol1, as a set of tuples.
+@memoize1
 def verticalDecompEqAEMol2(eqAEMol2):
     decomps = set()
     for aeMol2 in eqAEMol2.aeMol2s:
         for ii in range(1, len(aeMol2)):
             decomps.add((fEqAEMol2(takeAEMol2(aeMol2, ii)), fEqAEMol2(dropAEMol2(aeMol2, ii))))
-    return decomps
+    return frozenset(decomps)
 
 
 ##################################################
@@ -299,6 +303,7 @@ def blockHorizontalDecompAEMol2(aeMol2, k):
     return decomps
 
 # Gives a set of non-trivial decompositions of eqAEMol2 via horizontal composition, as pairs (m1, m2).
+@memoize1
 def horizontalDecompEqAEMol2(eqAEMol2):
     decomps = set()
     if len(eqAEMol2) == 0:
@@ -314,7 +319,7 @@ def horizontalDecompEqAEMol2(eqAEMol2):
             decomps = decomps.union(map(lambda x: (fEqAEMol2(x[0]), fEqAEMol2(x[1])), idSuffixDecompAEMol2(aeMol2Inst)))
 
         decomps = decomps.union(map(lambda x: (fEqAEMol2(x[0]), fEqAEMol2(x[1])),blockHorizontalDecompEqAEMol2(eqAEMol2)))
-    return decomps
+    return frozenset(decomps)
 
 ##################################################
 # Tensor decomposition, dimension 2
@@ -505,6 +510,7 @@ def blockTensorDecompAEMol2(aeMol2, k):
     return decomps
 
 # Gives a set of non-trivial decompositions of eqAEMol2 via tensor, as pairs (m1, m2).
+@memoize1
 def tensorDecompEqAEMol2(eqAEMol2):
     decomps = set()
     if len(eqAEMol2) == 0:
@@ -520,4 +526,4 @@ def tensorDecompEqAEMol2(eqAEMol2):
             decomps = decomps.union(map(lambda x: (fEqAEMol2(x[0]), fEqAEMol2(x[1])), idTensorSuffixDecompAEMol2(aeMol2Inst)))
 
         decomps = decomps.union(map(lambda x: (fEqAEMol2(x[0]), fEqAEMol2(x[1])),blockTensorDecompEqAEMol2(eqAEMol2)))
-    return decomps
+    return frozenset(decomps)
