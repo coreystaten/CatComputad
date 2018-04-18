@@ -43,11 +43,11 @@ shuffle20Dim3 = trimod3CellPrimFamily(shuffle20, {shuffle1: shuffle1Dim2})
 #shuffle21Paths1 = findPaths(shuffle21Vertices[0], targetEndCond(shuffle21Vertices[-1]), lambda x: x["current"] not in shuffle21Vertices, [shuffle1], cellsAway1, collate1)
 # [(shuffle1((a @ b), c))] -- [(a @ shuffle1(b, c)) . (shuffle1(a, c) @ b)]
 shuffle21Source = minimalASTFromEqMol1(ensureEqMol1(
-    shuffle1.fprim(comp0(_a, _b), _c)), [_a, _b, _c])
-shuffle21Target = minimalASTFromEqMol1(ensureEqMol1(
     comp1(
         comp0(_a, shuffle1.fprim(_b, _c)),
         comp0(shuffle1.fprim(_a, _c), _b))), [_a, _b, _c])
+shuffle21Target = minimalASTFromEqMol1(ensureEqMol1(
+    shuffle1.fprim(comp0(_a, _b), _c)), [_a, _b, _c])
 shuffle21 = PrimitiveFamily("shuffle21", 2, 0, [0, 0, 0], shuffle21Source, shuffle21Target)
 shuffle21Dim3 = trimod3CellPrimFamily(shuffle21, {shuffle1: shuffle1Dim2})
 
@@ -98,129 +98,129 @@ shuffle30 = PrimitiveFamily("shuffle30", 3, 0, [0, 0, 0, 0], shuffle30Source, sh
 #shuffle31Paths2 = findPaths2(shuffle31Source1, shuffle31Target1, [shuffle20, shuffle21])
 # [[shuffle20((a @ b), c, d)] & [(shuffle21(a, b, c) @ d) . (c @ shuffle1((a @ b), d))] & [(a @ shuffle1(b, c) @ d) . (shuffle1(a, c) @ (b @ d)) . (c @ shuffle21(a, b, d))]]
 # -- [[shuffle21(a, b, (c @ d))] & [(a @ shuffle20(b, c, d)) . (shuffle1(a, (c @ d)) @ b)] & [(a @ shuffle1(b, c) @ d) . ((a @ c) @ shuffle1(b, d)) . (shuffle20(a, c, d) @ b)]]
-shuffle31Source = minimalASTFromEqAEMol2(ensureEqAEMol2(
-    comp2s(
-        shuffle20.fprim(comp0(_a, _b), _c, _d),
-        comp1(
-            comp0(shuffle21.fprim(_a, _b, _c), _d),
-            comp0(_c, shuffle1.fprim(comp0(_a, _b), _d))
-        ),
-        comp1s(
-            comp0s(_a, shuffle1.fprim(_b, _c), _d),
-            comp0s(shuffle1.fprim(_a,_c), _b, _d),
-            comp0(_c, shuffle21.fprim(_a, _b, _d))
-        )
-    )), [_a, _b, _c, _d])
-shuffle31Target = minimalASTFromEqAEMol2(ensureEqAEMol2(
-    comp2s(
-        shuffle21.fprim(_a, _b, comp0(_c, _d)),
-        comp1(
-            comp0(_a, shuffle20.fprim(_b, _c, _d)),
-            comp0(shuffle1.fprim(_a, comp0(_c, _d)), _b)
-        ),
-        comp1s(
-            comp0s(_a, shuffle1.fprim(_b, _c), _d),
-            comp0s(_a, _c, shuffle1.fprim(_b, _d)),
-            comp0(shuffle20.fprim(_a, _c, _d), _b)
-        )
-    )), [_a, _b, _c, _d])
-shuffle31 = PrimitiveFamily("shuffle31", 3, 0, [0, 0, 0, 0], shuffle31Source, shuffle31Target)
+# shuffle31Source = minimalASTFromEqAEMol2(ensureEqAEMol2(
+#     comp2s(
+#         shuffle20.fprim(comp0(_a, _b), _c, _d),
+#         comp1(
+#             comp0(shuffle21.fprim(_a, _b, _c), _d),
+#             comp0(_c, shuffle1.fprim(comp0(_a, _b), _d))
+#         ),
+#         comp1s(
+#             comp0s(_a, shuffle1.fprim(_b, _c), _d),
+#             comp0s(shuffle1.fprim(_a,_c), _b, _d),
+#             comp0(_c, shuffle21.fprim(_a, _b, _d))
+#         )
+#     )), [_a, _b, _c, _d])
+# shuffle31Target = minimalASTFromEqAEMol2(ensureEqAEMol2(
+#     comp2s(
+#         shuffle21.fprim(_a, _b, comp0(_c, _d)),
+#         comp1(
+#             comp0(_a, shuffle20.fprim(_b, _c, _d)),
+#             comp0(shuffle1.fprim(_a, comp0(_c, _d)), _b)
+#         ),
+#         comp1s(
+#             comp0s(_a, shuffle1.fprim(_b, _c), _d),
+#             comp0s(_a, _c, shuffle1.fprim(_b, _d)),
+#             comp0(shuffle20.fprim(_a, _c, _d), _b)
+#         )
+#     )), [_a, _b, _c, _d])
+# shuffle31 = PrimitiveFamily("shuffle31", 3, 0, [0, 0, 0, 0], shuffle31Source, shuffle31Target)
 
 # ABCD -> DABC (n = 3, k = 1, insert ABC into D)
 # shuffle32Vertices = list(map(lambda x: comp0s(*x), shuffles([_a, _b, _c], [_d])))
 # shuffle32Paths1 = findPaths(shuffle32Vertices[0], targetEndCond(shuffle32Vertices[-1]), lambda x: x["current"] not in shuffle32Vertices, [shuffle1], cellsAway1, collate1)
 # searchForPathPairs2(shuffle32Paths1, [shuffle20, shuffle21])
 # [(shuffle1((a @ b @ c), d))] -- [((a @ b) @ shuffle1(c, d)) . (a @ shuffle1(b, d) @ c) . (shuffle1(a, d) @ (b @ c))]
-shuffle32Source1 = ensureEqMol1(shuffle1.fprim(comp0s(_a, _b, _c), _d))
-shuffle32Target1 = ensureEqMol1(
-    comp1s(
-        comp0s(_a, _b, shuffle1.fprim(_c, _d)),
-        comp0s(_a, shuffle1.fprim(_b, _d), _c),
-        comp0s(shuffle1.fprim(_a, _d), _b, _c)
-    ))
+# shuffle32Source1 = ensureEqMol1(shuffle1.fprim(comp0s(_a, _b, _c), _d))
+# shuffle32Target1 = ensureEqMol1(
+#     comp1s(
+#         comp0s(_a, _b, shuffle1.fprim(_c, _d)),
+#         comp0s(_a, shuffle1.fprim(_b, _d), _c),
+#         comp0s(shuffle1.fprim(_a, _d), _b, _c)
+#     ))
 #shuffle32Paths2 = findPaths2(shuffle32Source1, shuffle32Target1, [shuffle20, shuffle21])
 # [[shuffle21((a @ b), c, d)] & [((a @ b) @ shuffle1(c, d)) . (shuffle21(a, b, d) @ c)]]
 # -- [[shuffle21(a, (b @ c), d)] & [(a @ shuffle21(b, c, d)) . (shuffle1(a, d) @ (b @ c))]]
-shuffle32Source = minimalASTFromEqAEMol2(ensureEqAEMol2(
-    comp2s(
-        shuffle21.fprim(comp0(_a, _b), _c, _d),
-        comp1(
-            comp0s(_a, _b, shuffle1.fprim(_c, _d)),
-            comp0(shuffle21.fprim(_a, _b, _d), _c)
-        )
-    )), [_a, _b, _c, _d])
-shuffle32Target = minimalASTFromEqAEMol2(ensureEqAEMol2(
-    comp2s(
-        shuffle21.fprim(_a, comp0(_b, _c), _d),
-        comp1(
-            comp0(_a, shuffle21.fprim(_b, _c, _d)),
-            comp0s(shuffle1.fprim(_a, _d), _b, _c)
-        )
-    )), [_a, _b, _c ,_d])
-shuffle32 = PrimitiveFamily("shuffle32", 3, 0, [0, 0, 0, 0], shuffle32Source, shuffle32Target)
+# shuffle32Source = minimalASTFromEqAEMol2(ensureEqAEMol2(
+#     comp2s(
+#         shuffle21.fprim(comp0(_a, _b), _c, _d),
+#         comp1(
+#             comp0s(_a, _b, shuffle1.fprim(_c, _d)),
+#             comp0(shuffle21.fprim(_a, _b, _d), _c)
+#         )
+#     )), [_a, _b, _c, _d])
+# shuffle32Target = minimalASTFromEqAEMol2(ensureEqAEMol2(
+#     comp2s(
+#         shuffle21.fprim(_a, comp0(_b, _c), _d),
+#         comp1(
+#             comp0(_a, shuffle21.fprim(_b, _c, _d)),
+#             comp0s(shuffle1.fprim(_a, _d), _b, _c)
+#         )
+#     )), [_a, _b, _c ,_d])
+# shuffle32 = PrimitiveFamily("shuffle32", 3, 0, [0, 0, 0, 0], shuffle32Source, shuffle32Target)
 
 
-#permutahedron3Paths1 = findPaths1(comp0s(_a, _b, _c), comp0s(_c, _b, _a), [shuffle1])
+#breen3Paths1 = findPaths1(comp0s(_a, _b, _c), comp0s(_c, _b, _a), [shuffle1])
 # This choice is different from Schommer-Pries, but has the same number of cells , and the 2-cell paths involve fewer adjoints.
 # [(a @ shuffle1(b, c)) . (shuffle1(a, (c @ b)))] -- [(shuffle1((a @ b), c)) . (c @ shuffle1(a, b))]
-permutahedron3Source1 = ensureEqMol1(comp1s(
-    comp0(_a, shuffle1.fprim(_b, _c)),
-    shuffle1.fprim(_a, comp0(_c, _b))))
-permutahedron3Target1 = ensureEqMol1(comp1s(
-    shuffle1.fprim(comp0(_a, _b), _c),
-    comp0(_c, shuffle1.fprim(_a, _b))))
-#permutahedron3Paths2 = findPaths2(permutahedron3Source1, permutahedron3Target1, [shuffle20,  shuffle21.adj, shuffle1Dim2])
+# breen3Source1 = ensureEqMol1(comp1s(
+#     comp0(_a, shuffle1.fprim(_b, _c)),
+#     shuffle1.fprim(_a, comp0(_c, _b))))
+# breen3Target1 = ensureEqMol1(comp1s(
+#     shuffle1.fprim(comp0(_a, _b), _c),
+#     comp0(_c, shuffle1.fprim(_a, _b))))
+#breen3Paths2 = findPaths2(breen3Source1, breen3Target1, [shuffle20,  shuffle21.adj, shuffle1Dim2])
 # [[(a @ shuffle1(b, c)) . shuffle20(a, c, b)] &
 # [shuffle21_adj(a, b, c) . (c @ shuffle1(a, b))]]
 # -- [[shuffle1_dim2([1_{a}], [(shuffle1(b, c))])] &
 # [shuffle20(a, b, c) . (shuffle1(b, c) @ a)] &
 # [(shuffle1(a, b) @ c) . shuffle21_adj(b, a, c)] &
 # [shuffle1_dim2([(shuffle1(a, b))], [1_{c}])]]
-permutahedron3Source = minimalASTFromEqAEMol2(ensureEqAEMol2(
-    comp2s(
-        comp1s(
-            comp0(_a, shuffle1.fprim(_b, _c)),
-            shuffle20.fprim(_a, _c, _b)),
-        comp1s(
-            shuffle21.adj.fprim(_a, _b, _c),
-            comp0(_c, shuffle1.fprim(_a, _b))))), [_a, _b, _c])
-permutahedron3Target = minimalASTFromEqAEMol2(ensureEqAEMol2(
-    comp2s(
-        shuffle1Dim2.fprim(ensureEqMol1(_a), shuffle1.fprim(_b, _c)),
-        comp1s(
-            shuffle20.fprim(_a, _b, _c),
-            comp0(shuffle1.fprim(_b, _c), _a)),
-        comp1s(
-            comp0(shuffle1.fprim(_a, _b), _c),
-            shuffle21.adj.fprim(_b, _a, _c)),
-        shuffle1Dim2.fprim(shuffle1.fprim(_a, _b), ensureEqMol1(_c)))), [_a, _b, _c])
-permutahedron3 = PrimitiveFamily("permutahedron3", 3, 0, [0, 0, 0], permutahedron3Source, permutahedron3Target)
+# breen3Source = minimalASTFromEqAEMol2(ensureEqAEMol2(
+#     comp2s(
+#         comp1s(
+#             comp0(_a, shuffle1.fprim(_b, _c)),
+#             shuffle20.fprim(_a, _c, _b)),
+#         comp1s(
+#             shuffle21.adj.fprim(_a, _b, _c),
+#             comp0(_c, shuffle1.fprim(_a, _b))))), [_a, _b, _c])
+# breen3Target = minimalASTFromEqAEMol2(ensureEqAEMol2(
+#     comp2s(
+#         shuffle1Dim2.fprim(ensureEqMol1(_a), shuffle1.fprim(_b, _c)),
+#         comp1s(
+#             shuffle20.fprim(_a, _b, _c),
+#             comp0(shuffle1.fprim(_b, _c), _a)),
+#         comp1s(
+#             comp0(shuffle1.fprim(_a, _b), _c),
+#             shuffle21.adj.fprim(_b, _a, _c)),
+#         shuffle1Dim2.fprim(shuffle1.fprim(_a, _b), ensureEqMol1(_c)))), [_a, _b, _c])
+# breen3 = PrimitiveFamily("breen3", 3, 0, [0, 0, 0], breen3Source, breen3Target)
 
 
 # Alternative
 # # [(shuffle1(a, (b @ c))) . (b @ shuffle1(c, a)) . (shuffle1(b, (a @ c))) . (shuffle1(a, (c @ b)))]
 # # -- [(shuffle1(a, b) @ c) . (b @ shuffle1(a, c)) . (shuffle1(b, (c @ a))) . (shuffle1(c, a) @ b) . (shuffle1(a, (c @ b)))]
-# permutahedron3Source1 = ensureEqMol1(comp1s(
+# breen3Source1 = ensureEqMol1(comp1s(
 #     shuffle1.fprim(_a, comp0(_b, _c)),
 #     comp0(_b, shuffle1.fprim(_c, _a)),
 #     shuffle1.fprim(_b, comp0(_a, _c)),
 #     shuffle1.fprim(_a, comp0(_c, _b))
 # ))
-# permutahedron3Target1 = ensureEqMol1(comp1s(
+# breen3Target1 = ensureEqMol1(comp1s(
 #     comp0(shuffle1.fprim(_a, _b), _c),
 #     comp0(_b, shuffle1.fprim(_a, _c)),
 #     shuffle1.fprim(_b, comp0(_c, _a)),
 #     comp0(shuffle1.fprim(_c, _a), _b),
 #     shuffle1.fprim(_a, comp0(_c, _b))
 # ))
-# permutahedron3Paths2 = findPaths2(permutahedron3Source1, permutahedron3Target1, [shuffle20, shuffle21, shuffle1Dim2, shuffle1Dim2.adj])
+# breen3Paths2 = findPaths2(breen3Source1, breen3Target1, [shuffle20, shuffle21, shuffle1Dim2, shuffle1Dim2.adj])
 # # [[shuffle20(a, b, c) . (b @ shuffle1(c, a)) . (shuffle1(b, (a @ c))) . (shuffle1(a, (c @ b)))] &
 # # [(shuffle1(a, b) @ c) . (b @ shuffle1(a, c)) . shuffle1_dim2([1_{b}], [(shuffle1(c, a))]) . (shuffle1(a, (c @ b)))]]
 # # --
 # # [[shuffle20(a, b, c) . (b @ shuffle1(c, a)) . (shuffle1(b, (a @ c))) . (shuffle1(a, (c @ b)))] &
 # # [(shuffle1(a, b) @ c) . shuffle1_dim2([1_{b}], [(shuffle1(a, c)) . (shuffle1(c, a))]) . (shuffle1(a, (c @ b)))] &
 # # [(shuffle1(a, b) @ c) . shuffle1_dim2_adj([1_{b}], [(shuffle1(a, c))]) . (shuffle1(c, a) @ b) . (shuffle1(a, (c @ b)))]]
-# permutahedron3Source = minimalASTFromEqAEMol2(ensureEqAEMol2(
+# breen3Source = minimalASTFromEqAEMol2(ensureEqAEMol2(
 #     comp2s(
 #         comp1s(
 #             shuffle20.fprim(_a, _b, _c),
@@ -232,7 +232,7 @@ permutahedron3 = PrimitiveFamily("permutahedron3", 3, 0, [0, 0, 0], permutahedro
 #             comp0(_b, shuffle1.fprim(_a, _c)),
 #             shuffle1Dim2.fprim(ensureEqMol1(_b), ensureEqMol1(shuffle1.fprim(_c, _a))),
 #             shuffle1.fprim(_a, comp0(_c, _b))))), [_a, _b, _c])
-# permutahedron3Target = minimalASTFromEqAEMol2(ensureEqAEMol2(
+# breen3Target = minimalASTFromEqAEMol2(ensureEqAEMol2(
 #     comp2s(
 #         comp1s(
 #             shuffle20.fprim(_a, _b, _c),
@@ -250,8 +250,8 @@ permutahedron3 = PrimitiveFamily("permutahedron3", 3, 0, [0, 0, 0], permutahedro
 #             shuffle1.fprim(_a, comp0(_c, _b))))), [_a, _b, _c])
 
 # ALTERNATIVE EXPLORATION
-# Since there is an expansion of permutahedron3 using only shuffle20 and shuffle21.adj, redo shuffle31 and shuffle32 to also use only these.
-# This should give us best expansion of permutahedron4.
+# Since there is an expansion of breen3 using only shuffle20 and shuffle21, redo shuffle31 and shuffle32 to also use only these.
+# This should give us best expansion of breen4.
 
 
 # Shuffle30 is same
@@ -259,26 +259,26 @@ permutahedron3 = PrimitiveFamily("permutahedron3", 3, 0, [0, 0, 0], permutahedro
 # ABCD -> CDAB (n = 2, k = 2, insert AB into CD)
 #shuffle31Vertices = list(map(lambda x: comp0s(*x), shuffles([_a, _b], [_c, _d])))
 #shuffle31Paths1 = findPaths(shuffle31Vertices[0], targetEndCond(shuffle31Vertices[-1]), lambda x: x["current"] not in shuffle31Vertices, [shuffle1], cellsAway1, collate1)
-#searchForPathPairs2(shuffle31Paths1, [shuffle20, shuffle21.adj])
+#searchForPathPairs2(shuffle31Paths1, [shuffle20, shuffle21])
 #[(a @ shuffle1(b, (c @ d))) . (shuffle1(a, (c @ d)) @ b)] -- [(shuffle1((a @ b), c) @ d) . (c @ shuffle1((a @ b), d))]
-shuffle31Source1  = ensureEqMol1(
-    comp1(
-        comp0(_a, shuffle1.fprim(_b, comp0(_c, _d))),
-        comp0(shuffle1.fprim(_a, comp0(_c, _d)), _b)))
-shuffle31Target1 = ensureEqMol1(
-    comp1(
-        comp0(shuffle1.fprim(comp0(_a, _b), _c), _d),
-        comp0(_c, shuffle1.fprim(comp0(_a, _b), _d))))
-shuffle31Paths2 = findPaths2(shuffle31Source1, shuffle31Target1, [shuffle20, shuffle21.adj])
-# [[shuffle21_adj(a, b, (c @ d))] &
-# [shuffle20((a @ b), c, d)]]
-# -- [[(a @ shuffle20(b, c, d)) . (shuffle1(a, (c @ d)) @ b)] &
-# [(a @ shuffle1(b, c) @ d) . ((a @ c) @ shuffle1(b, d)) . (shuffle20(a, c, d) @ b)] &
-# [(shuffle21_adj(a, b, c) @ d) . ((c @ a) @ shuffle1(b, d)) . (c @ shuffle1(a, d) @ b)] &
-# [(shuffle1((a @ b), c) @ d) . (c @ shuffle21_adj(a, b, d))]]
+# shuffle31Source1  = ensureEqMol1(
+#     comp1(
+#         comp0(_a, shuffle1.fprim(_b, comp0(_c, _d))),
+#         comp0(shuffle1.fprim(_a, comp0(_c, _d)), _b)))
+# shuffle31Target1 = ensureEqMol1(
+#     comp1(
+#         comp0(shuffle1.fprim(comp0(_a, _b), _c), _d),
+#         comp0(_c, shuffle1.fprim(comp0(_a, _b), _d))))
+# shuffle31Paths2 = findPaths2(shuffle31Source1, shuffle31Target1, [shuffle20, shuffle21])
+# # [[shuffle21(a, b, (c @ d))] &
+# # [shuffle20((a @ b), c, d)]]
+# # -- [[(a @ shuffle20(b, c, d)) . (shuffle1(a, (c @ d)) @ b)] &
+# # [(a @ shuffle1(b, c) @ d) . ((a @ c) @ shuffle1(b, d)) . (shuffle20(a, c, d) @ b)] &
+# # [(shuffle21(a, b, c) @ d) . ((c @ a) @ shuffle1(b, d)) . (c @ shuffle1(a, d) @ b)] &
+# # [(shuffle1((a @ b), c) @ d) . (c @ shuffle21(a, b, d))]]
 shuffle31Source = minimalASTFromEqAEMol2(ensureEqAEMol2(
     comp2s(
-        shuffle21.adj.fprim(_a, _b, comp0(_c, _d)),
+        shuffle21.fprim(_a, _b, comp0(_c, _d)),
         shuffle20.fprim(comp0(_a, _b), _c, _d)
     )), [_a, _b, _c, _d])
 shuffle31Target = minimalASTFromEqAEMol2(ensureEqAEMol2(
@@ -291,74 +291,74 @@ shuffle31Target = minimalASTFromEqAEMol2(ensureEqAEMol2(
             comp0s(_a, _c, shuffle1.fprim(_b, _d)),
             comp0(shuffle20.fprim(_a, _c, _d), _b)),
         comp1s(
-            comp0(shuffle21.adj.fprim(_a, _b, _c), _d),
+            comp0(shuffle21.fprim(_a, _b, _c), _d),
             comp0s(_c, _a, shuffle1.fprim(_b, _d)),
             comp0s(_c, shuffle1.fprim(_a, _d), _b)),
         comp1s(
             comp0(shuffle1.fprim(comp0(_a, _b), _c), _d),
-            comp0(_c, shuffle21.adj.fprim(_a, _b, _d)))
+            comp0(_c, shuffle21.fprim(_a, _b, _d)))
     )), [_a, _b, _c, _d])
 shuffle31 = PrimitiveFamily("shuffle31", 3, 0, [0, 0, 0, 0], shuffle31Source, shuffle31Target)
-
-# ABCD -> DABC (n = 3, k = 1, insert ABC into D)
-# shuffle32Vertices = list(map(lambda x: comp0s(*x), shuffles([_a, _b, _c], [_d])))
-# shuffle32Paths1 = findPaths(shuffle32Vertices[0], targetEndCond(shuffle32Vertices[-1]), lambda x: x["current"] not in shuffle32Vertices, [shuffle1], cellsAway1, collate1)
-# searchForPathPairs2(shuffle32Paths1, [shuffle20, shuffle21.adj])
-# [((a @ b) @ shuffle1(c, d)) . (a @ shuffle1(b, d) @ c) . (shuffle1(a, d) @ (b @ c))] -- [(shuffle1((a @ b @ c), d))]
-shuffle32Source1 = ensureEqMol1(
-    comp1s(
-        comp0s(_a, _b, shuffle1.fprim(_c, _d)),
-        comp0s(_a, shuffle1.fprim(_b, _d), _c),
-        comp0s(shuffle1.fprim(_a, _d), _b, _c)
-    ))
-shuffle32Target1 = ensureEqMol1(shuffle1.fprim(comp0s(_a, _b, _c), _d))
-shuffle32Paths2 = findPaths2(shuffle32Source1, shuffle32Target1, [shuffle20, shuffle21.adj])
-# [[shuffle21((a @ b), c, d)] & [((a @ b) @ shuffle1(c, d)) . (shuffle21(a, b, d) @ c)]]
-# -- [[shuffle21(a, (b @ c), d)] & [(a @ shuffle21(b, c, d)) . (shuffle1(a, d) @ (b @ c))]]
+#
+# # ABCD -> DABC (n = 3, k = 1, insert ABC into D)
+# # shuffle32Vertices = list(map(lambda x: comp0s(*x), shuffles([_a, _b, _c], [_d])))
+# # shuffle32Paths1 = findPaths(shuffle32Vertices[0], targetEndCond(shuffle32Vertices[-1]), lambda x: x["current"] not in shuffle32Vertices, [shuffle1], cellsAway1, collate1)
+# # searchForPathPairs2(shuffle32Paths1, [shuffle20, shuffle21])
+# # [((a @ b) @ shuffle1(c, d)) . (a @ shuffle1(b, d) @ c) . (shuffle1(a, d) @ (b @ c))] -- [(shuffle1((a @ b @ c), d))]
+# shuffle32Source1 = ensureEqMol1(
+#     comp1s(
+#         comp0s(_a, _b, shuffle1.fprim(_c, _d)),
+#         comp0s(_a, shuffle1.fprim(_b, _d), _c),
+#         comp0s(shuffle1.fprim(_a, _d), _b, _c)
+#     ))
+# shuffle32Target1 = ensureEqMol1(shuffle1.fprim(comp0s(_a, _b, _c), _d))
+# shuffle32Paths2 = findPaths2(shuffle32Source1, shuffle32Target1, [shuffle20, shuffle21j])
+# # [[shuffle21((a @ b), c, d)] & [((a @ b) @ shuffle1(c, d)) . (shuffle21(a, b, d) @ c)]]
+# # -- [[shuffle21(a, (b @ c), d)] & [(a @ shuffle21(b, c, d)) . (shuffle1(a, d) @ (b @ c))]]
 shuffle32Source = minimalASTFromEqAEMol2(ensureEqAEMol2(
     comp2s(
         comp1(
-            comp0(_a, shuffle21.adj.fprim(_b, _c, _d)),
+            comp0(_a, shuffle21.fprim(_b, _c, _d)),
             comp0s(shuffle1.fprim(_a, _d), _b, _c)
         ),
-        shuffle21.adj.fprim(_a, comp0(_b, _c), _d),
+        shuffle21.fprim(_a, comp0(_b, _c), _d),
     )), [_a, _b, _c ,_d])
 shuffle32Target = minimalASTFromEqAEMol2(ensureEqAEMol2(
     comp2s(
         comp1(
             comp0s(_a, _b, shuffle1.fprim(_c, _d)),
-            comp0(shuffle21.adj.fprim(_a, _b, _d), _c)
+            comp0(shuffle21.fprim(_a, _b, _d), _c)
         ),
-        shuffle21.adj.fprim(comp0(_a, _b), _c, _d)
+        shuffle21.fprim(comp0(_a, _b), _c, _d)
     )), [_a, _b, _c, _d])
 shuffle32 = PrimitiveFamily("shuffle32", 3, 0, [0, 0, 0, 0], shuffle32Source, shuffle32Target)
-
-
-#permutahedron3Paths1 = findPaths1(comp0s(_a, _b, _c), comp0s(_c, _b, _a), [shuffle1])
-# This choice is different from Schommer-Pries, but has the same number of cells , and the 2-cell paths involve fewer adjoints.
-# [(a @ shuffle1(b, c)) . (shuffle1(a, (c @ b)))] -- [(shuffle1((a @ b), c)) . (c @ shuffle1(a, b))]
-# permutahedron3Source1 = ensureEqMol1(comp1s(
-#     comp0(_a, shuffle1.fprim(_b, _c)),
-#     shuffle1.fprim(_a, comp0(_c, _b))))
-# permutahedron3Target1 = ensureEqMol1(comp1s(
-#     shuffle1.fprim(comp0(_a, _b), _c),
-#     comp0(_c, shuffle1.fprim(_a, _b))))
-# permutahedron3Paths2 = findPaths2(permutahedron3Source1, permutahedron3Target1, [shuffle20,  shuffle21.adj, shuffle1Dim2])
-# [[(a @ shuffle1(b, c)) . shuffle20(a, c, b)] &
-# [shuffle21_adj(a, b, c) . (c @ shuffle1(a, b))]]
-# -- [[shuffle1_dim2([1_{a}], [(shuffle1(b, c))])] &
-# [shuffle20(a, b, c) . (shuffle1(b, c) @ a)] &
-# [(shuffle1(a, b) @ c) . shuffle21_adj(b, a, c)] &
-# [shuffle1_dim2([(shuffle1(a, b))], [1_{c}])]]
-permutahedron3Source = minimalASTFromEqAEMol2(ensureEqAEMol2(
+#
+#
+# #breen3Paths1 = findPaths1(comp0s(_a, _b, _c), comp0s(_c, _b, _a), [shuffle1])
+# # This choice is different from Schommer-Pries, but has the same number of cells , and the 2-cell paths involve fewer adjoints.
+# # [(a @ shuffle1(b, c)) . (shuffle1(a, (c @ b)))] -- [(shuffle1((a @ b), c)) . (c @ shuffle1(a, b))]
+# # breen3Source1 = ensureEqMol1(comp1s(
+# #     comp0(_a, shuffle1.fprim(_b, _c)),
+# #     shuffle1.fprim(_a, comp0(_c, _b))))
+# # breen3Target1 = ensureEqMol1(comp1s(
+# #     shuffle1.fprim(comp0(_a, _b), _c),
+# #     comp0(_c, shuffle1.fprim(_a, _b))))
+# # breen3Paths2 = findPaths2(breen3Source1, breen3Target1, [shuffle20,  shuffle21, shuffle1Dim2])
+# # [[(a @ shuffle1(b, c)) . shuffle20(a, c, b)] &
+# # [shuffle21(a, b, c) . (c @ shuffle1(a, b))]]
+# # -- [[shuffle1_dim2([1_{a}], [(shuffle1(b, c))])] &
+# # [shuffle20(a, b, c) . (shuffle1(b, c) @ a)] &
+# # [(shuffle1(a, b) @ c) . shuffle21(b, a, c)] &
+# # [shuffle1_dim2([(shuffle1(a, b))], [1_{c}])]]
+breen3Source = minimalASTFromEqAEMol2(ensureEqAEMol2(
     comp2s(
         comp1s(
             comp0(_a, shuffle1.fprim(_b, _c)),
             shuffle20.fprim(_a, _c, _b)),
         comp1s(
-            shuffle21.adj.fprim(_a, _b, _c),
+            shuffle21.fprim(_a, _b, _c),
             comp0(_c, shuffle1.fprim(_a, _b))))), [_a, _b, _c])
-permutahedron3Target = minimalASTFromEqAEMol2(ensureEqAEMol2(
+breen3Target = minimalASTFromEqAEMol2(ensureEqAEMol2(
     comp2s(
         shuffle1Dim2.fprim(ensureEqMol1(_a), shuffle1.fprim(_b, _c)),
         comp1s(
@@ -366,15 +366,15 @@ permutahedron3Target = minimalASTFromEqAEMol2(ensureEqAEMol2(
             comp0(shuffle1.fprim(_b, _c), _a)),
         comp1s(
             comp0(shuffle1.fprim(_a, _b), _c),
-            shuffle21.adj.fprim(_b, _a, _c)),
+            shuffle21.fprim(_b, _a, _c)),
         shuffle1Dim2.fprim(shuffle1.fprim(_a, _b), ensureEqMol1(_c)))), [_a, _b, _c])
-permutahedron3 = PrimitiveFamily("permutahedron3", 3, 0, [0, 0, 0], permutahedron3Source, permutahedron3Target)
+breen3 = PrimitiveFamily("breen3", 3, 0, [0, 0, 0], breen3Source, breen3Target)
 
 
 
 
 # NOTE: Full path search here is too large, so we find a simple path and then correct it.
-# Takes too long: permutahedron4Paths1 = findPaths1(comp0s(_a, _b, _c, _d), comp0s(_d, _c, _b, _a), [shuffle1])
+# Takes too long: breen4Paths1 = findPaths1(comp0s(_a, _b, _c, _d), comp0s(_d, _c, _b, _a), [shuffle1])
 # def isNotSingleBraid(path):
 #     if len(path["cells"]) == 0:
 #         return False
@@ -383,38 +383,55 @@ permutahedron3 = PrimitiveFamily("permutahedron3", 3, 0, [0, 0, 0], permutahedro
 #         return True
 #     return False
 # Too many paths to check them all; but we can check the shortest ones.
-#permutahedron4Paths1 = findPaths(comp0s(_a, _b, _c, _d), targetEndCond(comp0s(_d, _c, _b, _a)), lambda x: len(x["cells"]) > 2, [shuffle1], cellsAway1, collate1)
-#searchForPathPairs2(permutahedron4Paths1, [shuffle20,  shuffle21.adj, shuffle1Dim2])
+#breen4Paths1 = findPaths(comp0s(_a, _b, _c, _d), targetEndCond(comp0s(_d, _c, _b, _a)), lambda x: len(x["cells"]) > 2, [shuffle1], cellsAway1, collate1)
+#searchForPathPairs2(breen4Paths1, [shuffle20,  shuffle21, shuffle1Dim2])
 # Two short candidates:
 # [(a @ b @ shuffle1(c, d) . (a @ shuffle1(b, (d @ c))) . (shuffle1(a, (d @ c @ b)))]
 # -- [(shuffle1((a @ b @ c), d)) . (d @ shuffle1((a @ b), c)) . ((d @ c) @ shuffle1(a, b))]
-permutahedron4Source1 = fEqMol1(
+breen4Source1 = fEqMol1(
     comp1s(
         comp0s(_a, _b, shuffle1.fprim(_c, _d)),
         comp0(_a, shuffle1.fprim(_b, comp0(_d, _c))),
         shuffle1.fprim(_a, comp0s(_d, _c, _b))
     )
 )
-permutahedron4Target1 = fEqMol1(
+breen4Target1 = fEqMol1(
     comp1s(
         shuffle1.fprim(comp0s(_a, _b, _c), _d),
         comp0(_d, shuffle1.fprim(comp0(_a, _b), _c)),
         comp0s(_d, _c, shuffle1.fprim(_a, _b))
     )
 )
-permutahedron4Paths2 = list(findPaths(permutahedron4Source1, targetEndCond(permutahedron4Target1), lambda x: len(x["cells"]) >= 100, [shuffle20, shuffle21.adj, shuffle1Dim2], cellsAway2, collate2))
-permutahedron4Paths2.sort(key = len)
-# permutahedron3, shuffle31
-#circleAround3(permutahedron4Paths2[0], [shuffle30.adj, shuffle31, shuffle32.adj, permutahedron3, shuffle20Dim3, shuffle21Dim3.adj.getMate(), shuffle1Dim3])
-exploreFromToAdjCells3(permutahedron4Paths2, permutahedron4Paths2, [permutahedron3],
-    [shuffle30, shuffle31, shuffle31.adj, shuffle32.adj,
-    shuffle1Dim3, shuffle1Dim3.adj, shuffle1Dim3.getMate(), shuffle1Dim3.getMate().adj,
-    shuffle20Dim3, shuffle20Dim3.adj, shuffle20Dim3.getMate(), shuffle20Dim3.getMate().adj,
-    shuffle21Dim3, shuffle21Dim3.adj, shuffle21Dim3.getMate(), shuffle21Dim3.getMate().adj,
-    shuffle1Pi, shuffle1Pi.adj, shuffle1Pi.getMate(), shuffle1Pi.getMate().adj,
-    shuffle1Dim2.adjId1, shuffle1Dim2.adjId2, shuffle20.adjId1, shuffle20.adjId2, shuffle21.adjId1, shuffle21.adjId2], [shuffle30, shuffle31, shuffle31.adj, shuffle32.adj, permutahedron3])
 
-# ['shuffle30', 'shuffle31', 'shuffle32_adj', 'permutahedron3_adj', 'shuffle1_dim3', 'shuffle20_dim3', 'shuffle21_dim3']
+def _explorePaths1():
+    for p1 in breen4Paths1:
+        for p2 in breen4Paths1:
+            paths2 = findPaths2(p1, p2, [shuffle20, shuffle21, shuffle1Dim2])
+            exploreFromToAdjCells3(paths2, paths2, [shuffle30, shuffle31, shuffle32, breen3, shuffle20Dim3, shuffle21Dim3, shuffle1Dim3, shuffle1Pi], [],
+                    [shuffle30, shuffle30.adj, shuffle31, shuffle31.adj, shuffle32, shuffle32.adj, breen3, breen3.adj])
+
+#_explorePaths1()
+
+#breen4Paths2 = list(findPaths(breen4Source1, targetEndCond(breen4Target1), lambda x: len(x["cells"]) >= 100, [shuffle20, shuffle21, shuffle1Dim2], cellsAway2, collate2))
+#breen4Paths2.sort(key = len)
+# breen3, shuffle31
+#circleAround3(breen4Paths2[0], [shuffle30.adj, shuffle31, shuffle32.adj, breen3, shuffle20Dim3, shuffle21Dim3.adj.getMate(), shuffle1Dim3])
+# exploreFromToAdjCells3(breen4Paths2, breen4Paths2, [],
+#     [breen3, breen3.adj, shuffle30, shuffle31, shuffle32,  shuffle30.adj, shuffle31.adj, shuffle32.adj,
+#     shuffle1Dim3, shuffle1Dim3.adj, shuffle1Dim3.getMate(), shuffle1Dim3.getMate().adj,
+#     shuffle20Dim3, shuffle20Dim3.adj, shuffle20Dim3.getMate(), shuffle20Dim3.getMate().adj,
+#     shuffle21Dim3, shuffle21Dim3.adj, shuffle21Dim3.getMate(), shuffle21Dim3.getMate().adj,
+#     shuffle1Pi, shuffle1Pi.adj, shuffle1Pi.getMate(), shuffle1Pi.getMate().adj,
+#     shuffle1Dim2.adjId1, shuffle1Dim2.adjId2, shuffle20.adjId1, shuffle20.adjId2, shuffle21.adjId1, shuffle21.adjId2], [shuffle30, shuffle31, shuffle31.adj, shuffle32.adj, breen3])
+# exploreFromToAdjCells3(breen4Paths2, breen4Paths2, [breen3],
+#     [shuffle30, shuffle31, shuffle31.adj, shuffle32.adj,
+#     shuffle1Dim3, shuffle1Dim3.adj, shuffle1Dim3.getMate(), shuffle1Dim3.getMate().adj,
+#     shuffle20Dim3, shuffle20Dim3.adj, shuffle20Dim3.getMate(), shuffle20Dim3.getMate().adj,
+#     shuffle21Dim3, shuffle21Dim3.adj, shuffle21Dim3.getMate(), shuffle21Dim3.getMate().adj,
+#     shuffle1Pi, shuffle1Pi.adj, shuffle1Pi.getMate(), shuffle1Pi.getMate().adj,
+#     shuffle1Dim2.adjId1, shuffle1Dim2.adjId2, shuffle20.adjId1, shuffle20.adjId2, shuffle21.adjId1, shuffle21.adjId2], [shuffle30, shuffle31, shuffle31.adj, shuffle32.adj, breen3])
+
+# ['shuffle30', 'shuffle31', 'shuffle32_adj', 'breen3_adj', 'shuffle1_dim3', 'shuffle20_dim3', 'shuffle21_dim3']
 
 # [[shuffle1_dim2([1_{a}], [(b @ shuffle1(c, d)) . (shuffle1(b, (d @ c)))])] &
 # [shuffle20(a, b, (c @ d)) . (b @ shuffle1(c, d) @ a) . (shuffle1(b, (d @ c)) @ a)] &
@@ -424,36 +441,36 @@ exploreFromToAdjCells3(permutahedron4Paths2, permutahedron4Paths2, [permutahedro
 # [(shuffle1_dim2([(shuffle1(a, b))], [1_{c}]) @ d) . (c @ shuffle1((b @ a), d)) . (shuffle1(c, d) @ (b @ a))] &
 # [(shuffle1((a @ b), c) @ d) . (c @ shuffle1(a, b) @ d) . shuffle21_adj(c, (b @ a), d)] &
 # [shuffle1_dim2([(shuffle1((a @ b), c)) . (c @ shuffle1(a, b))], [1_{d}])]]
-permutahedron4Source2 = ensureEqAEMol2(
-    comp2s(
-        shuffle1Dim2.fprim(ensureEqMol1(_a), comp1s(comp0(_b, shuffle1.fprim(_c, _d)), shuffle1.fprim(_b, comp0(_d, _c)))),
-        comp1s(
-            shuffle20.fprim(_a, _b, comp0(_c, _d)),
-            comp0s(_b, shuffle1.fprim(_c, _d), _a),
-            comp0(shuffle1.fprim(_b, comp0(_d, _c)), _a)),
-        comp1s(
-            comp0s(shuffle1.fprim(_a, _b), _c, _d),
-            comp0(_b, shuffle1.fprim(_a, comp0(_c, _d))),
-            comp0(shuffle1Dim2.fprim(ensureEqMol1(_b), shuffle1.fprim(_c, _d)), _a)),
-        comp1s(
-            comp0s(shuffle1.fprim(_a, _b), _c, _d),
-            shuffle21.adj.fprim(_b, _a, comp0(_c, _d)),
-            comp0s(shuffle1.fprim(_c, _d), _b, _a)),
-        comp1s(
-            comp0s(shuffle1.fprim(_a, _b), _c, _d),
-            shuffle20.fprim(comp0(_b, _a), _c, _d),
-            comp0s(shuffle1.fprim(_c, _d), _b, _a)),
-        comp1s(
-            comp0(shuffle1Dim2.fprim(shuffle1.fprim(_a, _b), ensureEqMol1(_c)), _d),
-            comp0(_c, shuffle1.fprim(comp0(_b, _a), _d)),
-            comp0s(shuffle1.fprim(_c, _d), _b, _a)),
-        comp1s(
-            comp0(shuffle1.fprim(comp0(_a, _b), _c), _d),
-            comp0s(_c, shuffle1.fprim(_a, _b), _d),
-            shuffle21.adj.fprim(_c, comp0(_b, _a), _d)),
-        shuffle1Dim2.fprim(comp1(shuffle1.fprim(comp0(_a, _b), _c), comp0(_c, shuffle1.fprim(_a, _b))), ensureEqMol1(_d))
-    )
-)
+# breen4Source2 = ensureEqAEMol2(
+#     comp2s(
+#         shuffle1Dim2.fprim(ensureEqMol1(_a), comp1s(comp0(_b, shuffle1.fprim(_c, _d)), shuffle1.fprim(_b, comp0(_d, _c)))),
+#         comp1s(
+#             shuffle20.fprim(_a, _b, comp0(_c, _d)),
+#             comp0s(_b, shuffle1.fprim(_c, _d), _a),
+#             comp0(shuffle1.fprim(_b, comp0(_d, _c)), _a)),
+#         comp1s(
+#             comp0s(shuffle1.fprim(_a, _b), _c, _d),
+#             comp0(_b, shuffle1.fprim(_a, comp0(_c, _d))),
+#             comp0(shuffle1Dim2.fprim(ensureEqMol1(_b), shuffle1.fprim(_c, _d)), _a)),
+#         comp1s(
+#             comp0s(shuffle1.fprim(_a, _b), _c, _d),
+#             shuffle21.adj.fprim(_b, _a, comp0(_c, _d)),
+#             comp0s(shuffle1.fprim(_c, _d), _b, _a)),
+#         comp1s(
+#             comp0s(shuffle1.fprim(_a, _b), _c, _d),
+#             shuffle20.fprim(comp0(_b, _a), _c, _d),
+#             comp0s(shuffle1.fprim(_c, _d), _b, _a)),
+#         comp1s(
+#             comp0(shuffle1Dim2.fprim(shuffle1.fprim(_a, _b), ensureEqMol1(_c)), _d),
+#             comp0(_c, shuffle1.fprim(comp0(_b, _a), _d)),
+#             comp0s(shuffle1.fprim(_c, _d), _b, _a)),
+#         comp1s(
+#             comp0(shuffle1.fprim(comp0(_a, _b), _c), _d),
+#             comp0s(_c, shuffle1.fprim(_a, _b), _d),
+#             shuffle21.adj.fprim(_c, comp0(_b, _a), _d)),
+#         shuffle1Dim2.fprim(comp1(shuffle1.fprim(comp0(_a, _b), _c), comp0(_c, shuffle1.fprim(_a, _b))), ensureEqMol1(_d))
+#     )
+# )
 
 # --
 # [[shuffle1_dim2([1_{a}], [(b @ shuffle1(c, d)) . (shuffle1(b, (d @ c)))])] &
@@ -466,52 +483,52 @@ permutahedron4Source2 = ensureEqAEMol2(
 # [shuffle1_dim2([(shuffle1(a, b) @ c) . (b @ shuffle1(a, c)) . (shuffle1(b, c) @ a)], [1_{d}])] &
 # [(shuffle1((a @ b @ c), d)) . (d @ shuffle1(a, b) @ c) . (d @ shuffle21_adj(b, a, c))] &
 # [(shuffle1((a @ b @ c), d)) . (d @ shuffle1_dim2([(shuffle1(a, b))], [1_{c}]))]]
-permutahedron4Target2 = ensureEqAEMol2(
-    comp2s(
-        shuffle1Dim2.fprim(ensureEqMol1(_a), comp1s(comp0(_b, shuffle1.fprim(_c, _d)), shuffle1.fprim(_b, comp0(_d, _c)))),
-        comp1s(
-            shuffle20.fprim(_a, _b, comp0(_c, _d)),
-            comp0s(_b, shuffle1.fprim(_c, _d), _a),
-            comp0(shuffle1.fprim(_b, comp0(_d, _c)), _a)),
-        comp1s(
-            comp0s(shuffle1.fprim(_a, _b), _c, _d),
-            comp0(_b, shuffle1.fprim(_a, comp0(_c, _d))),
-            comp0(shuffle1Dim2.fprim(ensureEqMol1(_b), shuffle1.fprim(_c, _d)), _a)),
-        comp1s(
-            comp0s(shuffle1.fprim(_a, _b), _c, _d),
-            comp0(_b, shuffle20.fprim(_a, _c, _d)),
-            comp0(shuffle1.fprim(_b, comp0(_c, _d)), _a),
-            comp0s(shuffle1.fprim(_c, _d), _b, _a)),
-        comp1s(
-            comp0s(shuffle1.fprim(_a, _b), _c, _d),
-            comp0s(_b, shuffle1.fprim(_a, _c), _d),
-            comp0s(_b, _c, shuffle1.fprim(_a, _d)),
-            comp0(shuffle20.fprim(_b, _c, _d), _a),
-            comp0s(shuffle1.fprim(_c, _d), _b, _a)),
-        comp1s(
-            comp0s(shuffle1.fprim(_a, _b), _c, _d),
-            comp0s(_b, shuffle1.fprim(_a, _c), _d),
-            comp0s(shuffle1.fprim(_b, _c), _a, _d),
-            comp0(_c, shuffle21.adj.fprim(_b, _a, _d)),
-            comp0s(shuffle1.fprim(_c, _d), _b, _a)),
-        comp1s(
-            comp0s(shuffle1.fprim(_a, _b), _c, _d),
-            comp0s(_b, shuffle1.fprim(_a, _c), _d),
-            comp0s(shuffle1.fprim(_b, _c), _a, _d),
-            shuffle21.adj.fprim(_c, comp0(_b, _a), _d)),
-        shuffle1Dim2.fprim(comp1s(comp0(shuffle1.fprim(_a, _b), _c), comp0(_b, shuffle1.fprim(_a, _c)), comp0(shuffle1.fprim(_b, _c), _a)), ensureEqMol1(_d)),
-        comp1s(
-            shuffle1.fprim(comp0s(_a, _b, _c), _d),
-            comp0s(_d, shuffle1.fprim(_a, _b), _c),
-            comp0(_d, shuffle21.adj.fprim(_b, _a, _c))),
-        comp1s(
-            shuffle1.fprim(comp0s(_a, _b, _c), _d),
-            comp0(_d, shuffle1Dim2.fprim(shuffle1.fprim(_a, _b), ensureEqMol1(_c))))
-    )
-)
+# breen4Target2 = ensureEqAEMol2(
+#     comp2s(
+#         shuffle1Dim2.fprim(ensureEqMol1(_a), comp1s(comp0(_b, shuffle1.fprim(_c, _d)), shuffle1.fprim(_b, comp0(_d, _c)))),
+#         comp1s(
+#             shuffle20.fprim(_a, _b, comp0(_c, _d)),
+#             comp0s(_b, shuffle1.fprim(_c, _d), _a),
+#             comp0(shuffle1.fprim(_b, comp0(_d, _c)), _a)),
+#         comp1s(
+#             comp0s(shuffle1.fprim(_a, _b), _c, _d),
+#             comp0(_b, shuffle1.fprim(_a, comp0(_c, _d))),
+#             comp0(shuffle1Dim2.fprim(ensureEqMol1(_b), shuffle1.fprim(_c, _d)), _a)),
+#         comp1s(
+#             comp0s(shuffle1.fprim(_a, _b), _c, _d),
+#             comp0(_b, shuffle20.fprim(_a, _c, _d)),
+#             comp0(shuffle1.fprim(_b, comp0(_c, _d)), _a),
+#             comp0s(shuffle1.fprim(_c, _d), _b, _a)),
+#         comp1s(
+#             comp0s(shuffle1.fprim(_a, _b), _c, _d),
+#             comp0s(_b, shuffle1.fprim(_a, _c), _d),
+#             comp0s(_b, _c, shuffle1.fprim(_a, _d)),
+#             comp0(shuffle20.fprim(_b, _c, _d), _a),
+#             comp0s(shuffle1.fprim(_c, _d), _b, _a)),
+#         comp1s(
+#             comp0s(shuffle1.fprim(_a, _b), _c, _d),
+#             comp0s(_b, shuffle1.fprim(_a, _c), _d),
+#             comp0s(shuffle1.fprim(_b, _c), _a, _d),
+#             comp0(_c, shuffle21.adj.fprim(_b, _a, _d)),
+#             comp0s(shuffle1.fprim(_c, _d), _b, _a)),
+#         comp1s(
+#             comp0s(shuffle1.fprim(_a, _b), _c, _d),
+#             comp0s(_b, shuffle1.fprim(_a, _c), _d),
+#             comp0s(shuffle1.fprim(_b, _c), _a, _d),
+#             shuffle21.adj.fprim(_c, comp0(_b, _a), _d)),
+#         shuffle1Dim2.fprim(comp1s(comp0(shuffle1.fprim(_a, _b), _c), comp0(_b, shuffle1.fprim(_a, _c)), comp0(shuffle1.fprim(_b, _c), _a)), ensureEqMol1(_d)),
+#         comp1s(
+#             shuffle1.fprim(comp0s(_a, _b, _c), _d),
+#             comp0s(_d, shuffle1.fprim(_a, _b), _c),
+#             comp0(_d, shuffle21.adj.fprim(_b, _a, _c))),
+#         comp1s(
+#             shuffle1.fprim(comp0s(_a, _b, _c), _d),
+#             comp0(_d, shuffle1Dim2.fprim(shuffle1.fprim(_a, _b), ensureEqMol1(_c))))
+#     )
+# )
 
 
-# xx = circleAround3(permutahedron4Target2, [
+# xx = circleAround3(breen4Target2, [
 #     shuffle30,
 #     shuffle30.adj,
 #     shuffle30.getMate(),
@@ -524,10 +541,10 @@ permutahedron4Target2 = ensureEqAEMol2(
 #     shuffle32.adj,
 #     shuffle32.getMate(),
 #     shuffle32.adj.getMate(),
-#     permutahedron3,
-#     permutahedron3.adj,
-#     permutahedron3.getMate(),
-#     permutahedron3.adj.getMate(),
+#     breen3,
+#     breen3.adj,
+#     breen3.getMate(),
+#     breen3.adj.getMate(),
 #     shuffle1Dim3,
 #     shuffle1Dim3.adj,
 #     shuffle1Dim3.getMate(),
@@ -548,7 +565,7 @@ permutahedron4Target2 = ensureEqAEMol2(
 #     shuffle1Dim2.adjId1,
 #     shuffle1Dim2.adjId2])
 
-# xx = findPaths3(permutahedron4Source2, permutahedron4Target2, [
+# xx = findPaths3(breen4Source2, breen4Target2, [
 #     shuffle30,
 #     shuffle30.adj,
 #     shuffle30.getMate(),
@@ -561,10 +578,10 @@ permutahedron4Target2 = ensureEqAEMol2(
 #     shuffle32.adj,
 #     shuffle32.getMate(),
 #     shuffle32.adj.getMate(),
-#     permutahedron3,
-#     permutahedron3.adj,
-#     permutahedron3.getMate(),
-#     permutahedron3.adj.getMate(),
+#     breen3,
+#     breen3.adj,
+#     breen3.getMate(),
+#     breen3.adj.getMate(),
 #     shuffle1Dim3,
 #     shuffle1Dim3.adj,
 #     shuffle1Dim3.getMate(),
@@ -588,25 +605,25 @@ permutahedron4Target2 = ensureEqAEMol2(
 # print(len(yy))
 
 # def ff(ii):
-#     return findPaths3([0], permutahedron4Paths2[ii],
-#         [shuffle30, shuffle31, shuffle32.adj, permutahedron3, shuffle1Dim3, shuffle1Dim3,
+#     return findPaths3([0], breen4Paths2[ii],
+#         [shuffle30, shuffle31, shuffle32.adj, breen3, shuffle1Dim3, shuffle1Dim3,
 #         shuffle20Dim3, shuffle20Dim3.adj, shuffle21Dim3, shuffle21Dim3.adj,
 #         shuffle20.adjId1, shuffle20.adjId2, shuffle21.adjId1, shuffle21.adjId2, shuffle1Dim2.adjId2, shuffle1Dim2.adjId2,
-#         shuffle1Dim3.getMate(), permutahedron3.getMate()])
-# permutahedron4Paths3 = ff(1)
-# ls = set(map(lambda x: frozenset(primSetCompCell3(x)), permutahedron4Paths3))
-# print(len(permutahedron4Paths3))
+#         shuffle1Dim3.getMate(), breen3.getMate()])
+# breen4Paths3 = ff(1)
+# ls = set(map(lambda x: frozenset(primSetCompCell3(x)), breen4Paths3))
+# print(len(breen4Paths3))
 # print(len(ls))
 #print(list(ls)[0])
 #print(list(ls)[1])
 
 
-#exploreFromToAdjCells3(permutahedron4Paths2, permutahedron4Paths2, [shuffle30, shuffle31, shuffle32.adj, permutahedron3.adj, shuffle1Dim3, shuffle20Dim3, shuffle21Dim3], [])
-#searchForPathPairs3AdjFam(small, large, [shuffle30, shuffle31, shuffle32.adj, permutahedron3.adj, shuffle1Dim3], [])
-#meetInMiddleSearchForPathPairs3(permutahedron4Paths2, [shuffle30, shuffle31, shuffle32, permutahedron3, shuffle1Dim3])
-# , , shuffle32, permutahedron3, shuffle1Dim3, shuffle1M, shuffle1Pi
+#exploreFromToAdjCells3(breen4Paths2, breen4Paths2, [shuffle30, shuffle31, shuffle32.adj, breen3.adj, shuffle1Dim3, shuffle20Dim3, shuffle21Dim3], [])
+#searchForPathPairs3AdjFam(small, large, [shuffle30, shuffle31, shuffle32.adj, breen3.adj, shuffle1Dim3], [])
+#meetInMiddleSearchForPathPairs3(breen4Paths2, [shuffle30, shuffle31, shuffle32, breen3, shuffle1Dim3])
+# , , shuffle32, breen3, shuffle1Dim3, shuffle1M, shuffle1Pi
 
 # [(a @ shuffle1(b, c) @ d) . ((a @ c) @ shuffle1(b, d)) . (a @ shuffle1(c, d) @ b) . (shuffle1(a, (d @ c @ b)))] -- [(shuffle1(a, b) @ (c @ d)) . (b @ shuffle1(a, c) @ d) . (shuffle1(b, c) @ (a @ d)) . (shuffle1((c @ b @ a), d))]
 # [(a @ shuffle1(b, c) @ d) . ((a @ c) @ shuffle1(b, d)) . (a @ shuffle1(c, d) @ b) . (shuffle1(a, (d @ c @ b)))] -- [(a @ shuffle1(b, c) @ d) . (shuffle1(a, c) @ (b @ d)) . (c @ shuffle1(a, b) @ d) . (shuffle1((c @ b @ a), d))]
 
-#meetInMiddleSearchForPathPairs2(permutahedron4Paths1, [shuffle20,  shuffle21.adj, shuffle1Dim2])
+#meetInMiddleSearchForPathPairs2(breen4Paths1, [shuffle20,  shuffle21.adj, shuffle1Dim2])

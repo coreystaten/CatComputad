@@ -329,8 +329,15 @@ def isLeftTensorTransposableAtIndex(aeMol2, k):
 
 # Returns true if the two are left tensor transposable.
 def areLeftTensorTransposable(eqA1, eqA2):
-    a1r = eqA1.righthand
-    a2l = eqA2.lefthand
+    a1rBase = eqA1.righthand
+    a2lBase = eqA2.lefthand
+
+    # Temporarily replace with with distinct primitives; otherwise this fails when the primitive of both atoms is the same,
+    # since they can't be distinguished in the shared collapse.
+    p1 = ConstPrim2("", a1rBase.p2.source, a1rBase.p2.target)
+    p2 = ConstPrim2("", a2lBase.p2.source, a2lBase.p2.target)
+    a1r = fAtom2(a1rBase.l1, a1rBase.a0, p1, a1rBase.b0, a1rBase.r1)
+    a2l = fAtom2(a2lBase.l1, a2lBase.a0, p2, a2lBase.b0, a2lBase.r1)
 
     a1rEq = fEqMol1(a1r.r1)
     a2lEq = fEqMol1(a2l.l1)
@@ -459,7 +466,7 @@ def maxTensorPrefixDecompAEMol2(aeMol2):
         m1 = maximal[0]
         m2 = maximal[1]
     else:
-        m1 = fAEIdMol2(fIdMol1(fMol0(())))
+        m1 = fAEIdMol2(ensureEqMol1(fMol0(())))
         m2 = aeMol2
     return (m1, m2)
 
@@ -472,7 +479,7 @@ def maxTensorSuffixDecompAEMol2(aeMol2):
         m2 = maximal[1]
     else:
         m1 = aeMol2
-        m2 = fAEIdMol2(fIdMol1(fMol0(())))
+        m2 = fAEIdMol2(ensureEqMol1(fMol0(())))
     return (m1, m2)
 
 def blockTensorDecompEqAEMol2(m):
@@ -498,7 +505,7 @@ def blockTensorDecompAEMol2(aeMol2, k):
     (discard, h) = maxTensorPrefixDecompAEMol2(block2Pre)
 
     w = removeTensorSuffixEqMol1(h.source, maxSuffix.eqMol1)
-    wDecomps = tensorDecompEqMol1(w)
+    wDecomps = set(tensorDecompEqMol1(w))
     wDecomps.add((w, fEqMol1(fIdMol1(fMol0(())))))
     wDecomps.add((fEqMol1(fIdMol1(fMol0(()))), w))
 

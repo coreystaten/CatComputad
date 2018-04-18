@@ -45,6 +45,8 @@ class Prim1(IdHashed):
 
 class ConstPrim1(Prim1):
     def __init__(self,name,source,target):
+        if source == fMol0(()) or target == fMol0(()):
+            raise Exception("Degenerate 1-primitives disallowed.")
         self.name = name
         self.source = source
         self.target = target
@@ -158,7 +160,7 @@ class ConstPrim2(Prim2):
         super(ConstPrim2, self).__init__()
 
     def __str__(self):
-        return "p2(" + self.name + ")"
+        return self.name 
 
     def __repr__(self):
         return self.name
@@ -228,7 +230,7 @@ class AEMol2(IdHashed):
 class AEIdMol2(AEMol2):
     def __init__(self, eqMol1):
         if type(eqMol1) != EqMol1:
-            raise "ERROR"
+            raise Exception("ERROR")
 
         self.eqMol1 = eqMol1
         self.eqAtom2s = ()
@@ -1161,7 +1163,7 @@ def ensureEqMol1(x):
     if isinstance(x, Prim0):
         x = ensureMol0(x)
     if isinstance(x, Mol0):
-        x = IdMol1(x)
+        x = fIdMol1(x)
 
     if isinstance(x, Prim1):
         x = prim1ToMol1(x)
@@ -1351,6 +1353,16 @@ def primSetEqMol1(eqMol1):
         pset = set()
         for atom in inst.atom1s:
             pset.add(atom.p1)
+        return pset
+
+def primSetEqAEMol2(eqAEMol2):
+    inst = next(iter(eqAEMol2.aeMol2s))
+    if isinstance(inst, AEIdMol2):
+        return set()
+    else:
+        pset = set()
+        for atom in inst.eqAtom2s:
+            pset.add(atom.righthand.p2)
         return pset
 
 def primSetCompCell3(compCell3):

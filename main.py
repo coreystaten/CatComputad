@@ -63,6 +63,9 @@ _v = ConstPrim2("v", _l, _m)
 
 _H = Functor("H")
 
+str1 = "[[shuffle1_dim2([1_{a}], [(b @ shuffle1(c, d)) . (shuffle1(b, (d @ c)))])] & [shuffle20(a, b, (c @ d)) . (b @ shuffle1(c, d) @ a) . (shuffle1(b, (d @ c)) @ a)] & [(shuffle1(a, b) @ (c @ d)) . (b @ shuffle1(a, (c @ d))) . (shuffle1_dim2([1_{b}], [(shuffle1(c, d))]) @ a)] & [(shuffle1(a, b) @ (c @ d)) . shuffle21_adj(b, a, (c @ d)) . (shuffle1(c, d) @ (b @ a))] & [(shuffle1(a, b) @ (c @ d)) . shuffle20((b @ a), c, d) . (shuffle1(c, d) @ (b @ a))] & [(shuffle1_dim2([(shuffle1(a, b))], [1_{c}]) @ d) . (c @ shuffle1((b @ a), d)) . (shuffle1(c, d) @ (b @ a))] & [(shuffle1((a @ b), c) @ d) . (c @ shuffle1(a, b) @ d) . shuffle21_adj(c, (b @ a), d)] & [shuffle1_dim2([(shuffle1((a @ b), c)) . (c @ shuffle1(a, b))], [1_{d}])]]"
+
+
 #shuffle1_pi_adj([(shuffle1(b, c))], [1_{d}], [1_{(c @ b)}], [1_{d}])
 
 #cProfile.run("searchForPathPairs3AdjFam(permutahedron4Paths2, [shuffle30, shuffle31, shuffle32.adj, permutahedron3.adj, shuffle1Dim3], [])")

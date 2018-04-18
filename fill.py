@@ -37,10 +37,54 @@ def tensorSitesEqAEMol2(eqAEMol2):
     return sites(eqAEMol2, fEqAEMol2(fAEIdMol2(fEqMol1(fIdMol1(fMol0(()))))), fEqAEMol2(fAEIdMol2(fEqMol1(fIdMol1(fMol0(()))))), tensorDecompEqAEMol2)
 
 
+def findPaths(start, keepCond, endCond, primFamilies, cellsAwayFunc, collateFunc, memory={}):
+    # Maps 0-cells to the 1-cells from primFamilies having them as sources.
+    cellGraph = {}
+
+    path = {"cells": (), "seen": frozenset([start]), "current": start}
+    # If start == end, we don't include it in seen so that we don't preclude all paths.
+    # TODO: Got rid of end parameter, does this formulation cause any problems?
+    if endCond(path) and keepCond(path):
+        path["seen"] = frozenset()
+
+    (finishedPaths, pathCount, reportSum, lastReportSum) = _stepPathNarrow(path, cellGraph, keepCond, endCond, primFamilies, cellsAwayFunc, memory, 0.0, 0.0, 1.0, 0)
+    return list(set([collateFunc(tuple(p["cells"])) for p in finishedPaths]))
+
+def _stepPathNarrow(path, cellGraph, keepCond, endCond, primFamilies, cellsAwayFunc, memory, reportSum, lastReportSum, reportWeight, pathCount):
+#print(list(map(str, paths[-1]["cells"])))
+#        if len(paths) == 8:
+#            for p in paths:
+#                print(list(map(str, p["cells"])))
+    #if len(paths[0]["cells"]) > 10:
+        #print(str(paths[0]["cells"][2]))
+    if path["current"] in cellGraph:
+        cellsAway = cellGraph[path["current"]]
+    else:
+        cellsAway = cellsAwayFunc(path["current"], primFamilies, memory)
+        cellGraph[path["current"]] = cellsAway
+    (finished, new) = _stepPath(path, cellsAway, keepCond, endCond, primFamilies, cellsAwayFunc, memory)
+    if len(new) == 0:
+        returnPc = 1
+        reportSum += reportWeight
+    else:
+        returnPc = 0
+
+    for n in new:
+        subWeight = reportWeight / len(new)
+        (newFinished, newPc, reportSum, lastReportSum) = _stepPathNarrow(n, cellGraph, keepCond, endCond, primFamilies, cellsAwayFunc, memory, reportSum, lastReportSum, subWeight, pathCount)
+        finished.extend(newFinished)
+        pathCount += newPc
+        returnPc += newPc
+        if int(reportSum  * 100) > int(lastReportSum * 100):
+            #print("%d%% progress after %d paths:" % (int(reportSum * 100), pathCount))
+            lastReportSum = reportSum
+
+    return (finished, returnPc, reportSum, lastReportSum)
+
 # TODO: Add adjoint prim matching.
 # keepCond and endCond should be True/False functions on paths.
 # If keepCond is True, a record of the path will be returned.  If endCond is True, that path will no longer be explored.
-def findPaths(start, keepCond, endCond, primFamilies, cellsAwayFunc, collateFunc, memory={}):
+def findPathsBroad(start, keepCond, endCond, primFamilies, cellsAwayFunc, collateFunc, memory={}):
     # Maps 0-cells to the 1-cells from primFamilies having them as sources.
     cellGraph = {}
 
@@ -57,9 +101,11 @@ def findPaths(start, keepCond, endCond, primFamilies, cellsAwayFunc, collateFunc
         paths = newPaths
     return list(set([collateFunc(tuple(p["cells"])) for p in finishedPaths]))
 
-def _stepPaths(paths, cellGraph, keepCond, endCond, primFamilies, cellsAwayFunc, memory):
-    #if len(paths) > 10000:
-    #    print(list(map(str, paths[-1]["cells"])))
+def _stepPathsBroad(paths, cellGraph, keepCond, endCond, primFamilies, cellsAwayFunc, memory):
+    if len(paths) > 10000:
+         print("TOO MANY PATHS.  Quitting search.")
+         return ([], [])
+        #print(list(map(str, paths[-1]["cells"])))
     print("(_stepPaths: %d)" % (len(paths),))
 #        if len(paths) == 8:
 #            for p in paths:
@@ -269,7 +315,7 @@ def findPaths1DEFUNCT(start, end, pathGraph):
 # The length of each returned inner list is the same as the length of the initial outer list.
 def probConcat(ls):
     if len(ls) == 0:
-        return []
+        return [[]]
     elif len(ls) == 1:
         return [[y] for y in ls[0]]
     else:
@@ -331,6 +377,23 @@ def searchForPathPairs3AdjFam(group1, group2, adjFamilies, primFamilies):
         print("Search using %s" % (str(list(map(str, c))),))
         searchForPathPairs3(group1, group2,  c + primFamilies)
 
+def exploreFromToAdjCells2(baseCells, seeking, adjFamilies, primFamilies, countFamilies):
+    for b in baseCells:
+        print("-----------------------------------")
+        print("START CELL: " + str(b))
+        print("-----------------------------------")
+        seeking2 = set(seeking)
+        if b in seeking2:
+            seeking2.remove(b)
+        exploreFromToAdj2(b, seeking2, adjFamilies, primFamilies, countFamilies)
+
+def exploreFromToAdj2(base, seeking, adjFamilies, primFamilies, countFamilies):
+    l = [[f, f.adj] for f in adjFamilies]
+    choices = probConcat(l)
+    for c in choices:
+        print("Explore using %s" % (str(list(map(str, c))),))
+        exploreFromTo2(base, seeking,  c + primFamilies, countFamilies)
+
 def exploreFromToAdjCells3(baseCells, seeking, adjFamilies, primFamilies, countFamilies):
     for b in baseCells:
         print("-----------------------------------")
@@ -348,21 +411,59 @@ def exploreFromToAdj3(base, seeking, adjFamilies, primFamilies, countFamilies):
         print("Explore using %s" % (str(list(map(str, c))),))
         exploreFromTo3(base, seeking,  c + primFamilies, countFamilies)
 
-def exploreFromTo3(base, seeking, primFamilies, countFamilies):
-    paths = findPaths(base, lambda x: ensureEqAEMol2(x["cells"][-1].target) in seeking, lambda x: False, primFamilies, cellsAway3, collate3, memory={})
+def exploreFromTo2(base, seeking, primFamilies, countFamilies):
+    paths = findPaths(base, lambda x: ensureEqMol1(x["cells"][-1].target) in seeking, lambda x: False, primFamilies, cellsAway2, collate2, memory={})
     print("%d paths found." % len(paths))
-    primSetsByTarget = {}
+    primCountsByTarget = {}
+    countFamilyStrs = set(map(str, countFamilies))
     for p in paths:
-        key = ensureEqAEMol2(p.target)
-        if key not in primSetsByTarget:
-            primSetsByTarget[key] = set()
-        pset = primSetCompCell3(p)
-        primSetsByTarget[key].add(frozenset(filter(lambda x: x.family in countFamilies, pset)))
-    for (t,p) in primSetsByTarget.items():
+        key = ensureEqMol1(p.target)
+        if key not in primCountsByTarget:
+            primCountsByTarget[key] = set()
+        pcount = primCount2(p)
+        for (name,t) in list(pcount.keys()):
+            if name not in countFamilyStrs:
+                del pcount[(name, t)]
+        primCountsByTarget[key].add(frozenset(pcount.items()))
+    for (t,p) in primCountsByTarget.items():
         if len(p) > 1:
             for p1 in paths:
                 for p2 in paths:
-                    if ensureEqAEMol2(p1.source) == ensureEqAEMol2(p2.source) and ensureEqAEMol2(p1.target) == ensureEqAEMol2(p2.target) and primSetCompCell3(p1) != primSetCompCell3(p2):
+                    if ensureEqMol1(p1.source) == ensureEqMol1(p2.source) and ensureEqMol1(p1.target) == ensureEqMol1(p2.target) and frozenset(primCount2(p1).items()) != frozenset(primCount2(p2).items()):
+                        print("Dual paths detected:")
+                        print("FROM:")
+                        print(p1.source)
+                        print("--")
+                        print(p1.target)
+                        print("PRIMSET 1 IS:")
+                        print(lmap(str, primSetEqAEMol2(p1)))
+                        print("PRIMSET 2 IS:")
+                        print(lmap(str, primSetEqAEMol2(p2)))
+                        print("PATH 1 IS:")
+                        print(str(p1))
+                        print("PATH 2 IS:")
+                        print(str(p2))
+            break
+
+def exploreFromTo3(base, seeking, primFamilies, countFamilies):
+    paths = findPaths(base, lambda x: ensureEqAEMol2(x["cells"][-1].target) in seeking, lambda x: False, primFamilies, cellsAway3, collate3, memory={})
+    print("%d paths found." % len(paths))
+    primCountsByTarget = {}
+    countFamilyStrs = set(map(str, countFamilies))
+    for p in paths:
+        key = ensureEqAEMol2(p.target)
+        if key not in primCountsByTarget:
+            primCountsByTarget[key] = set()
+        pcount = primCount3(p)
+        for (name,t) in list(pcount.keys()):
+            if name not in countFamilyStrs:
+                del pcount[(name, t)]
+        primCountsByTarget[key].add(frozenset(pcount.items()))
+    for (t,p) in primCountsByTarget.items():
+        if len(p) > 1:
+            for p1 in paths:
+                for p2 in paths:
+                    if ensureEqAEMol2(p1.source) == ensureEqAEMol2(p2.source) and ensureEqAEMol2(p1.target) == ensureEqAEMol2(p2.target) and frozenset(primCount3(p1).items()) != frozenset(primCount3(p2).items()):
                         print("Dual paths detected:")
                         print("FROM:")
                         print(p1.source)
@@ -376,7 +477,6 @@ def exploreFromTo3(base, seeking, primFamilies, countFamilies):
                         print(str(p1))
                         print("PATH 2 IS:")
                         print(str(p2))
-
             break
 
 
@@ -465,8 +565,35 @@ def meetInMiddleSearchForPathPairs3(paths, primFamilies):
 
             # Figure out which things can join.
 
+def _incDict(tup1, tup2, d):
+    if tup1 in d:
+        d[tup1] += 1
+    elif tup2 in d:
+        d[tup2] -= 1
+        if d[tup2] == 0:
+            del d[tup2]
+    else:
+        d[tup1] = 1
 
-def primCount(cc3):
+def primCount2(eqAEMol2):
+    return {(str(k1),k2):v for ((k1,k2),v) in _primCount2(eqAEMol2).items()}
+
+def _primCount2(eqAEMol2):
+    count = {}
+    for eqAtom2 in next(iter(eqAEMol2.aeMol2s)).eqAtom2s:
+        p = eqAtom2.righthand.p2
+        if isinstance(p, FunctorPrim2):
+            toAdd = _primCount2(p.eqAEMol2)
+            for ((fam, par), v) in toAdd.items():
+                for ii in range(v):
+                    _incDict((fam, par), (fam.adj, par), count)
+        else:
+            tup1 = (p.family, tuple(p.params))
+            tup2 = (p.family.adj, tuple(p.params))
+            _incDict(tup1, tup2, count)
+    return count
+
+def primCount3(cc3):
     count = {}
     for stepCell in cc3.stepCell3s:
         tup1 = (str(stepCell.p.family), tuple(stepCell.p.params))
@@ -479,7 +606,7 @@ def primCount(cc3):
                 del count[tup2]
         else:
             count[tup1] = 1
-    return frozenset([(k,v) for (k,v) in count.items()])
+    return count
 
 
 def circleAround3(startPath, primFamilies):
