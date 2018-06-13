@@ -20,6 +20,8 @@ _d = ConstPrim0("d")
 shuffle1Source = minimalASTFromMol0(comp0(_a, _b), [_a, _b])
 shuffle1Target = minimalASTFromMol0(comp0(_b, _a), [_a, _b])
 shuffle1 = PrimitiveFamily("shuffle1", 1, 0, [0, 0], shuffle1Source, shuffle1Target)
+
+
 shuffle1Dim2 = tritrans2CellPrimFamily(shuffle1)
 shuffle1Dim3 = tritrans3CellPrimFamily(shuffle1, shuffle1Dim2)
 shuffle1Pi = tritransPiPrimFamily(shuffle1, shuffle1Dim2)

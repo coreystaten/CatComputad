@@ -8,7 +8,7 @@ H = Functor("H")
 Ha, Hb, Hc, Hd, He = app(H,a), app(H,b), app(H,c), app(H,d), app(H,e)
 
 # We add the functor H in the third argument, indicating that it is a functor variable.
-chiSource = minimalASTFromMol0(comp0(Ha, Hb), [a, b], [H])
+chiSource = minimalASTFromMol0(comp0(app(H, a), app(H,b)), [a, b], [H])
 chiTarget = minimalASTFromMol0(ensureMol0(app(H, comp0(a, b))), [a, b], [H])
 # We also set the third argument of chi to 1, indicating that its source and target contain a single functor variable.
 chi = PrimitiveFamily("chi", 1, 1, [0,0], chiSource, chiTarget)
